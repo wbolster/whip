@@ -147,7 +147,20 @@ def shell(database_dir):
             out = json.dumps(value, indent=2)
             print out
 
-        print
+@app.cmd(name='perftest')
+@app.cmd_arg('--iterations', default=1000, help="The number of iterations")
+def perftest(iterations, database_dir):
+    import random
+    import time
+    start_time = time.time()
+    db = open_database(database_dir)
+
+    for n in xrange(iterations):
+        ip = ''.join(chr(random.randint(0, 255)) for i in xrange(4))
+        lookup_ip(db, ip)
+
+    elapsed = time.time() - start_time
+    print '%d lookups in %.2fs (%.2f req/s)' % (iterations, elapsed, iterations / elapsed)
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
