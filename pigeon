@@ -87,7 +87,10 @@ def lookup_ip(db, ip):
         iter_kwargs.update(key_to=range_key)
 
     it = db.RangeIter(**iter_kwargs)
-    key, value = it.next()
+    try:
+        key, value = it.next()
+    except StopIteration:
+        return None
     end = key[4:]
 
     if ip > end:
