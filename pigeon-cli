@@ -67,7 +67,9 @@ def perftest(iterations, database_dir):
         p.lookup_ip(ip)
 
     elapsed = time.time() - start_time
-    print '%d lookups in %.2fs (%.2f req/s)' % (iterations, elapsed, iterations / elapsed)
+    out = "{:d} lookups in {:.2f}s ({:.2f} req/s)".format(
+        iterations, elapsed, iterations / elapsed)
+    print(out)
 
 
 def main():
