@@ -4,13 +4,13 @@ Pigeon, fast IP Geo lookup
 """
 
 import csv
-import json
 import logging
 from math import ceil
 import struct
-from socket import inet_ntoa
+import socket
 
 import leveldb
+import simplejson as json
 
 __all__ = ['Pigeon']
 
@@ -23,18 +23,12 @@ logger = logging.getLogger(__name__)
 #
 
 IP_STRUCT = struct.Struct('>L')
-pack_ip = IP_STRUCT.pack
-pack_ips = struct.Struct('>LL').pack
-
-
-def unpack_ip(ip):
-    return IP_STRUCT.unpack(ip)[0]
 
 
 def incr_ip(ip):
-    n = unpack_ip(ip) + 1
+    n = IP_STRUCT.unpack(ip)[0] + 1
     try:
-        return pack_ip(n)
+        return IP_STRUCT.pack(n)
     except struct.error:
         return None
 
@@ -54,10 +48,15 @@ class Pigeon(object):
         """Load CSV data from an open file-like object"""
         put = self.db.Put
         dr = csv.DictReader(fp, delimiter='\t')
+
+        inet_ntoa = socket.inet_ntoa
+        dumps = json.dumps
+        pack_ip = IP_STRUCT.pack
+
         for n, rec in enumerate(dr, 1):
-            key = pack_ips(
-                int(rec['start_ip_int']),
-                int(rec['end_ip_int']))
+            start_ip = pack_ip(int(rec['start_ip_int']))
+            end_ip = pack_ip(int(rec['end_ip_int']))
+            key = start_ip + end_ip
 
             # TODO: carrier_id, tld_id, sld_id, reg_org_id,
             # phone_number_prefix, asn, cidr
@@ -68,9 +67,9 @@ class Pigeon(object):
             else:
                 timezone = '{:+04d}'.format(int(ceil(100 * float(tz))))
 
-            value = json.dumps(dict(
-                begin=inet_ntoa(pack_ip(int(rec['start_ip_int']))),
-                end=inet_ntoa(pack_ip(int(rec['end_ip_int']))),
+            value = dumps(dict(
+                begin=inet_ntoa(start_ip),
+                end=inet_ntoa(end_ip),
                 continent=(rec['continent'], 1.),
                 country=(rec['country_iso2'], float(rec['country_cf']) / 100),
                 state=(rec['state'], float(rec['state_cf']) / 100),

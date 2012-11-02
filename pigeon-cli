@@ -14,6 +14,17 @@ from pigeon import Pigeon
 
 logger = logging.getLogger('pigeon')
 
+def json_pp(s):
+    return json.dumps(json.loads(s), indent=2)
+
+
+def lookup_and_print(p, ip):
+    value = p.lookup_ip(inet_aton(ip))
+    if value is None:
+        print("No hit found")
+    else:
+        print(json_pp(value))
+
 
 app = aaargh.App(description="Fast IP geo lookup")
 app.arg('--database-dir')
@@ -31,15 +42,7 @@ def load_data(input, database_dir):
 @app.cmd_arg('ip', help="The IP address to lookup")
 def lookup(ip, database_dir):
     p = Pigeon(database_dir)
-    N = 100 * 1000
-    for x in xrange(N):
-        value = json.loads(p.lookup_ip(inet_aton(ip)))
-
-    if value is None:
-        print 'no hit'
-    else:
-        out = json.dumps(value, indent=2)
-        print out
+    lookup_and_print(p, ip)
 
 
 @app.cmd(name="shell")
@@ -47,12 +50,7 @@ def shell(database_dir):
     p = Pigeon(database_dir)
     while True:
         ip = raw_input('IP: ')
-        value = json.loads(p.lookup_ip(inet_aton(ip)))
-        if value is None:
-            print 'no hit'
-        else:
-            out = json.dumps(value, indent=2)
-            print out
+        lookup_and_print(p, ip)
 
 
 @app.cmd(name='perftest')
