@@ -88,7 +88,7 @@ class PigeonStore(object):
             if n % 10000 == 0:
                 logger.info('Indexed %d records', n)
 
-    def lookup_ip(self, ip):
+    def lookup(self, ip):
         """Lookup a single ip address in the database"""
         iter_kwargs = dict(
             include_value=True,

@@ -19,7 +19,7 @@ def json_pp(s):
 
 
 def lookup_and_print(p, ip):
-    value = p.lookup_ip(inet_aton(ip))
+    value = p.lookup(inet_aton(ip))
     if value is None:
         print("No hit found")
     else:
@@ -61,7 +61,7 @@ def perftest(iterations, database_dir):
     p = PigeonStore(database_dir)
 
     rand_bytes = os.urandom
-    lookup = p.lookup_ip
+    lookup = p.lookup
     for n in xrange(iterations):
         ip = rand_bytes(4)
         lookup(ip)
