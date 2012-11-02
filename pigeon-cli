@@ -56,7 +56,8 @@ def shell(database_dir):
 
 
 @app.cmd(name='perftest')
-@app.cmd_arg('--iterations', default=1000, type=int, help="The number of iterations")
+@app.cmd_arg('--iterations', default=100 * 1000, type=int,
+             help="The number of iterations")
 def perftest(iterations, database_dir):
     start_time = time.time()
     p = Pigeon(database_dir)
