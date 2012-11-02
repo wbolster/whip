@@ -2,7 +2,7 @@
 
 import logging
 import json
-import random
+import os
 from socket import inet_aton
 import sys
 import time
@@ -62,9 +62,11 @@ def perftest(iterations, database_dir):
     start_time = time.time()
     p = Pigeon(database_dir)
 
+    rand_bytes = os.urandom
+    lookup = p.lookup_ip
     for n in xrange(iterations):
-        ip = ''.join(chr(random.randint(0, 255)) for i in xrange(4))
-        p.lookup_ip(ip)
+        ip = rand_bytes(4)
+        lookup(ip)
 
     elapsed = time.time() - start_time
     out = "{:d} lookups in {:.2f}s ({:.2f} req/s)".format(
