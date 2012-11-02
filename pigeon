@@ -148,7 +148,7 @@ def shell(database_dir):
             print out
 
 @app.cmd(name='perftest')
-@app.cmd_arg('--iterations', default=1000, help="The number of iterations")
+@app.cmd_arg('--iterations', default=1000, type=int, help="The number of iterations")
 def perftest(iterations, database_dir):
     import random
     import time
