@@ -12,7 +12,7 @@ import socket
 import leveldb
 import simplejson as json
 
-__all__ = ['Pigeon']
+__all__ = ['PigeonStore']
 
 DEFAULT_DATABASE_DIR = 'db/'
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ def incr_ip(ip):
 # Public API
 #
 
-class Pigeon(object):
+class PigeonStore(object):
     def __init__(self, database_dir=None):
         if database_dir is None:
             database_dir = DEFAULT_DATABASE_DIR
