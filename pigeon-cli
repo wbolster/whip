@@ -1,133 +1,39 @@
 #!/usr/bin/env python
 
-import csv
 import logging
-from math import ceil
-import struct
-from socket import inet_aton, inet_ntoa
+import json
+import random
+from socket import inet_aton
 import sys
+import time
 
 import aaargh
-import leveldb
-import json
 
-DEFAULT_DATABASE_DIR = 'db/'
-
-logger = logging.getLogger(__name__)
+from pigeon import Pigeon
 
 
-#
-# Utilities
-#
+logger = logging.getLogger('pigeon')
 
-IP_STRUCT = struct.Struct('>L')
-pack_ip = IP_STRUCT.pack
-pack_ips = struct.Struct('>LL').pack
-
-
-def unpack_ip(ip):
-    return IP_STRUCT.unpack(ip)[0]
-
-
-def incr_ip(ip):
-    n = unpack_ip(ip) + 1
-    try:
-        return pack_ip(n)
-    except struct.error:
-        return None
-
-
-def generate_records(fp):
-    dr = csv.DictReader(fp, delimiter='\t')
-
-    for rec in dr:
-        key = pack_ips(
-            int(rec['start_ip_int']),
-            int(rec['end_ip_int']))
-
-        # TODO: carrier_id, tld_id, sld_id, reg_org_id,
-        # phone_number_prefix, asn, cidr
-
-        tz = rec['timezone']
-        if tz != '999':
-            timezone = None
-        else:
-            timezone = '{:+04d}'.format(int(ceil(100 * float(tz))))
-
-        value = json.dumps(dict(
-            begin=inet_ntoa(pack_ip(int(rec['start_ip_int']))),
-            end=inet_ntoa(pack_ip(int(rec['end_ip_int']))),
-            continent=(rec['continent'], 1.),
-            country=(rec['country_iso2'], float(rec['country_cf']) / 100),
-            state=(rec['state'], float(rec['state_cf']) / 100),
-            city=(rec['city'], float(rec['city_cf']) / 100),
-            postal_code=rec['postal_code'],
-            type=rec['connectiontype'],
-            routing=rec['ip_routingtype'],
-            coordinates=(float(rec['latitude']), float(rec['longitude'])),
-            timezone=timezone,
-            line_speed=rec['linespeed'],
-            asn=rec['asn'],
-        ))
-        yield key, value
-
-
-def open_database(database_dir):
-    logger.debug("Opening database %s", database_dir)
-    return leveldb.LevelDB(database_dir)
-
-
-def lookup_ip(db, ip):
-    iter_kwargs = dict(
-        include_value=True,
-        reverse=True)
-
-    range_key = incr_ip(ip)
-    if range_key is not None:
-        iter_kwargs.update(key_to=range_key)
-
-    it = db.RangeIter(**iter_kwargs)
-    try:
-        key, value = it.next()
-    except StopIteration:
-        return None
-    end = key[4:]
-
-    if ip > end:
-        # looked up ip must be within the range
-        return None
-
-    return json.loads(value)
-
-
-#
-# Application
-#
 
 app = aaargh.App(description="Fast IP geo lookup")
-app.arg('--database-dir', default=DEFAULT_DATABASE_DIR)
+app.arg('--database-dir')
 
 
 @app.cmd(name='load', help="Load data from a CSV file")
 @app.cmd_arg('input', type=file, nargs='?', default=sys.stdin)
 def load_data(input, database_dir):
     logger.debug("Loading data from %s", input)
-    db = open_database(database_dir)
-    for n, rec in enumerate(generate_records(input), 1):
-        key, value = rec
-        db.Put(key, value)
-
-        if n % 10000 == 0:
-            logging.info('Indexed %d records', n)
+    p = Pigeon(database_dir)
+    p.load(input)
 
 
 @app.cmd(name="lookup")
 @app.cmd_arg('ip', help="The IP address to lookup")
 def lookup(ip, database_dir):
-    db = open_database(database_dir)
+    p = Pigeon(database_dir)
     N = 100 * 1000
     for x in xrange(N):
-        value = lookup_ip(db, inet_aton(ip))
+        value = json.loads(p.lookup_ip(inet_aton(ip)))
 
     if value is None:
         print 'no hit'
@@ -135,33 +41,38 @@ def lookup(ip, database_dir):
         out = json.dumps(value, indent=2)
         print out
 
+
 @app.cmd(name="shell")
 def shell(database_dir):
-    db = open_database(database_dir)
+    p = Pigeon(database_dir)
     while True:
         ip = raw_input('IP: ')
-        value = lookup_ip(db, inet_aton(ip))
+        value = json.loads(p.lookup_ip(inet_aton(ip)))
         if value is None:
             print 'no hit'
         else:
             out = json.dumps(value, indent=2)
             print out
 
+
 @app.cmd(name='perftest')
 @app.cmd_arg('--iterations', default=1000, type=int, help="The number of iterations")
 def perftest(iterations, database_dir):
-    import random
-    import time
     start_time = time.time()
-    db = open_database(database_dir)
+    p = Pigeon(database_dir)
 
     for n in xrange(iterations):
         ip = ''.join(chr(random.randint(0, 255)) for i in xrange(4))
-        lookup_ip(db, ip)
+        p.lookup_ip(ip)
 
     elapsed = time.time() - start_time
     print '%d lookups in %.2fs (%.2f req/s)' % (iterations, elapsed, iterations / elapsed)
 
+
+def main():
+    return app.run()
+
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    sys.exit(app.run())
+    sys.exit(main())
