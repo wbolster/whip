@@ -11,8 +11,8 @@ import aaargh
 
 from pigeon import PigeonStore
 
-
 logger = logging.getLogger('pigeon')
+
 
 def json_pp(s):
     return json.dumps(json.loads(s), indent=2)
