@@ -22,7 +22,11 @@ def lookup():
     except socket_error:
         abort(400)
 
-    response = make_response(p.lookup(k))
+    info_as_json = p.lookup(k)
+    if info_as_json is None:
+        abort(404)
+
+    response = make_response(info_as_json)
     response.headers['Content-type'] = 'application/json'
     return response
 
