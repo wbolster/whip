@@ -85,7 +85,7 @@ class PigeonStore(object):
 
             put(key, value)
 
-            if n % 10000 == 0:
+            if n % 100000 == 0:
                 logger.info('Indexed %d records', n)
 
     def lookup(self, ip):
