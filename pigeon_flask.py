@@ -13,10 +13,8 @@ def open_store():
     p = PigeonStore()
 
 
-@app.route('/lookup')
-def lookup():
-    ip = request.args['ip']
-
+@app.route('/ip/<ip>')
+def lookup(ip):
     try:
         k = inet_aton(ip)
     except socket_error:
