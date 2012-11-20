@@ -9,7 +9,7 @@ from math import ceil
 import struct
 import socket
 
-import leveldb
+import plyvel
 import simplejson as json
 
 __all__ = ['PigeonStore']
@@ -42,16 +42,16 @@ class PigeonStore(object):
         if database_dir is None:
             database_dir = DEFAULT_DATABASE_DIR
         logger.debug("Opening database %s", database_dir)
-        self.db = leveldb.LevelDB(database_dir)
+        self.db = plyvel.DB(database_dir)
 
     def load(self, fp):
         """Load CSV data from an open file-like object"""
-        put = self.db.Put
         dr = csv.DictReader(fp, delimiter='\t')
 
         inet_ntoa = socket.inet_ntoa
         dumps = json.dumps
         pack_ip = IP_STRUCT.pack
+        put = self.db.put
 
         for n, rec in enumerate(dr, 1):
             start_ip = pack_ip(int(rec['start_ip_int']))
@@ -90,15 +90,8 @@ class PigeonStore(object):
 
     def lookup(self, ip):
         """Lookup a single ip address in the database"""
-        iter_kwargs = dict(
-            include_value=True,
-            reverse=True)
-
         range_key = incr_ip(ip)
-        if range_key is not None:
-            iter_kwargs.update(key_to=range_key)
-
-        it = self.db.RangeIter(**iter_kwargs)
+        it = self.db.iterator(reverse=True, stop=range_key)
         try:
             key, value = it.next()
         except StopIteration:
