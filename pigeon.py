@@ -47,15 +47,9 @@ class PigeonStore(object):
     def load(self, fp):
         """Load CSV data from an open file-like object"""
         dr = csv.DictReader(fp, delimiter='\t')
-
-        inet_ntoa = socket.inet_ntoa
-        dumps = json.dumps
-        pack_ip = IP_STRUCT.pack
-        put = self.db.put
-
         for n, rec in enumerate(dr, 1):
-            start_ip = pack_ip(int(rec['start_ip_int']))
-            end_ip = pack_ip(int(rec['end_ip_int']))
+            start_ip = IP_STRUCT.pack(int(rec['start_ip_int']))
+            end_ip = IP_STRUCT.pack(int(rec['end_ip_int']))
             key = start_ip + end_ip
 
             # TODO: carrier_id, tld_id, sld_id, reg_org_id,
@@ -67,9 +61,9 @@ class PigeonStore(object):
             else:
                 timezone = '{:+04d}'.format(int(ceil(100 * float(tz))))
 
-            value = dumps(dict(
-                begin=inet_ntoa(start_ip),
-                end=inet_ntoa(end_ip),
+            value = json.dumps(dict(
+                begin=socket.inet_ntoa(start_ip),
+                end=socket.inet_ntoa(end_ip),
                 continent=(rec['continent'], 1.),
                 country=(rec['country_iso2'], float(rec['country_cf']) / 100),
                 state=(rec['state'], float(rec['state_cf']) / 100),
@@ -83,7 +77,7 @@ class PigeonStore(object):
                 asn=rec['asn'],
             ))
 
-            put(key, value)
+            self.db.put(key, value)
 
             if n % 100000 == 0:
                 logger.info('Indexed %d records', n)
@@ -93,7 +87,7 @@ class PigeonStore(object):
         range_key = incr_ip(ip)
         it = self.db.iterator(reverse=True, stop=range_key)
         try:
-            key, value = it.next()
+            key, value = next(it)
         except StopIteration:
             # Start of range, no hit
             return None
