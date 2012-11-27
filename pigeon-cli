@@ -33,8 +33,8 @@ app.arg('--database-dir')
 @app.cmd(name='load', help="Load data from a CSV file")
 @app.cmd_arg('input', type=file, nargs='?', default=sys.stdin)
 def load_data(input, database_dir):
-    logger.debug("Loading data from %s", input)
-    p = PigeonStore(database_dir)
+    logger.info("Loading data from %s", input)
+    p = PigeonStore(database_dir, create_if_missing=True)
     p.load(input)
 
 

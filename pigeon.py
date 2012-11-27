@@ -38,11 +38,11 @@ def incr_ip(ip):
 #
 
 class PigeonStore(object):
-    def __init__(self, database_dir=None):
+    def __init__(self, database_dir=None, create_if_missing=False):
         if database_dir is None:
             database_dir = DEFAULT_DATABASE_DIR
         logger.debug("Opening database %s", database_dir)
-        self.db = plyvel.DB(database_dir)
+        self.db = plyvel.DB(database_dir, create_if_missing=create_if_missing)
 
     def load(self, fp):
         """Load CSV data from an open file-like object"""
