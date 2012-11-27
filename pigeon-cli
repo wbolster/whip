@@ -58,11 +58,11 @@ def shell(database_dir):
              help="The number of iterations")
 def perftest(iterations, database_dir):
     logger.info("Running %d iterations", iterations)
-    start_time = time.time()
     p = PigeonStore(database_dir)
-
     rand_bytes = os.urandom
     lookup = p.lookup
+
+    start_time = time.time()
     for n in xrange(iterations):
         ip = rand_bytes(4)
         lookup(ip)
