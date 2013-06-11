@@ -39,10 +39,11 @@ def load_data(input, database_dir):
 
 
 @app.cmd(name="lookup")
-@app.cmd_arg('ip', help="The IP address to lookup")
-def lookup(ip, database_dir):
+@app.cmd_arg('ips', help="The IP address(es) to lookup", nargs='+')
+def lookup(ips, database_dir):
     p = PigeonStore(database_dir)
-    lookup_and_print(p, ip)
+    for ip in ips:
+        lookup_and_print(p, ip)
 
 
 @app.cmd(name="shell")
