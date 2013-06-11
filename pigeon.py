@@ -86,6 +86,17 @@ class PigeonStore(object):
             database_dir,
             create_if_missing=create_if_missing,
             lru_cache_size=128 * 1024 * 1024)
+        self._make_iter()
+
+    def _make_iter(self):
+        """Make an iterator for the current database.
+
+        Iterator construction is relatively costly, so reuse it for
+        performance reasons. The iterator won't see any data written
+        after its construction, but this is not a problem since the data
+        set is static.
+        """
+        self.iter = self.db.iterator(reverse=True)
 
     def load(self, fp):
         """Load CSV data from an open file-like object"""
@@ -99,12 +110,15 @@ class PigeonStore(object):
             if n % 100000 == 0:
                 logger.info('Indexed %d records', n)
 
+        # Refresh iterator so that it sees the new data
+        self._make_iter()
+
     def lookup(self, ip):
         """Lookup a single ip address in the database"""
         range_key = incr_ip(ip)
-        it = self.db.iterator(reverse=True, stop=range_key)
+        self.iter.seek(range_key)
         try:
-            key, value = next(it)
+            key, value = next(self.iter)
         except StopIteration:
             # Start of range, no hit
             return None
