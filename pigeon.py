@@ -4,25 +4,15 @@ Pigeon, fast IP Geo lookup
 """
 
 import csv
-from itertools import chain, count, groupby, tee
 import logging
 from math import ceil
 import struct
 import socket
 
-try:
-    from itertools import imap, izip
-except ImportError:
-    # Python 3
-    imap = map
-    izip = zip
-    xrange = range
-
 import plyvel
 import simplejson as json
 
 
-from operator import itemgetter
 __all__ = ['PigeonStore']
 
 
@@ -44,17 +34,6 @@ def incr_ip(ip):
         return IP_STRUCT.pack(n)
     except struct.error:
         return None
-
-
-def batch(iterable, n):
-    counter = chain.from_iterable(izip(*tee(count(), n)))
-    _next = next
-
-    def key(item):
-        return _next(counter)
-
-    it = iter(iterable)
-    return imap(itemgetter(1), groupby(it, key=key))
 
 
 def transform_record(rec):
@@ -105,20 +84,20 @@ class PigeonStore(object):
         logger.debug("Opening database %s", database_dir)
         self.db = plyvel.DB(
             database_dir,
-            create_if_missing=create_if_missing)
+            create_if_missing=create_if_missing,
+            lru_cache_size=128 * 1024 * 1024)
 
     def load(self, fp):
         """Load CSV data from an open file-like object"""
         dr = csv.DictReader(fp, delimiter='\t')
-        n = 0
-        for chunk in batch(dr, BATCH_SIZE):
-            with self.db.write_batch() as wb:
-                for n, rec in enumerate(chunk, n + 1):
-                    key, value = transform_record(rec)
-                    wb.put(key, value)
+        put = self.db.put
+        _transform = transform_record
+        for n, rec in enumerate(dr, 1):
+            key, value = _transform(rec)
+            put(key, value)
 
-                    if n % 100000 == 0:
-                        logger.info('Indexed %d records', n)
+            if n % 100000 == 0:
+                logger.info('Indexed %d records', n)
 
     def lookup(self, ip):
         """Lookup a single ip address in the database"""
