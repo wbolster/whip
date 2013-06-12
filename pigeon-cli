@@ -60,13 +60,15 @@ def shell(database_dir):
 def perftest(iterations, database_dir):
     logger.info("Running %d iterations", iterations)
     p = PigeonStore(database_dir)
-    rand_bytes = os.urandom
-    lookup = p.lookup
+    size = 4
 
+    # Use a sliding window over random data to obtain 4 bytes at a time
+    rand_bytes = os.urandom(iterations + size - 1)
+
+    lookup = p.lookup
     start_time = time.time()
     for n in xrange(iterations):
-        ip = rand_bytes(4)
-        lookup(ip)
+        lookup(rand_bytes[n:n + size])
 
     elapsed = time.time() - start_time
     out = "{:d} lookups in {:.2f}s ({:.2f} req/s)".format(
