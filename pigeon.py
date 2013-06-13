@@ -39,7 +39,6 @@ def incr_ip(ip):
 def transform_record(rec):
     start_ip = IP_STRUCT.pack(int(rec['start_ip_int']))
     end_ip = IP_STRUCT.pack(int(rec['end_ip_int']))
-    key = start_ip + end_ip
 
     # TODO: carrier_id, tld_id, sld_id, reg_org_id,
     # phone_number_prefix, asn, cidr
@@ -69,6 +68,10 @@ def transform_record(rec):
         line_speed=rec['linespeed'],
         asn=rec['asn'],
     ))
+
+    # The start IP is the key; the end IP is prepended to the value
+    key = start_ip
+    value = end_ip + value
 
     return key, value
 
@@ -124,8 +127,8 @@ class PigeonStore(object):
             return None
 
         # Looked up ip must be within the range
-        end = key[4:]
+        end = value[:4]
         if ip > end:
             return None
 
-        return value
+        return value[4:]
