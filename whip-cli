@@ -27,7 +27,7 @@ def lookup_and_print(db, ip):
 
 
 app = aaargh.App(description="Fast IP geo lookup")
-app.arg('--database-dir')
+app.arg('--database-dir', default='db')
 
 
 @app.cmd(name='load', help="Load data from a CSV file")
