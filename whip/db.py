@@ -1,7 +1,7 @@
 
 import csv
 import logging
-from math import ceil
+import math
 import struct
 import socket
 
@@ -10,11 +10,6 @@ import simplejson as json
 
 
 logger = logging.getLogger(__name__)
-
-
-#
-# Utilities
-#
 
 IP_STRUCT = struct.Struct('>L')
 
@@ -38,7 +33,7 @@ def transform_record(rec):
     if tz != '999':
         timezone = None
     else:
-        timezone = '{:+04d}'.format(int(ceil(100 * float(tz))))
+        timezone = '{:+04d}'.format(int(math.ceil(100 * float(tz))))
 
     value = json.dumps(dict(
         begin=socket.inet_ntoa(start_ip),
@@ -66,10 +61,6 @@ def transform_record(rec):
 
     return key, value
 
-
-#
-# Public API
-#
 
 class Database(object):
     def __init__(self, database_dir, create_if_missing=False):
