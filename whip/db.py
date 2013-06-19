@@ -77,9 +77,7 @@ def transform_record(rec):
 #
 
 class Database(object):
-    def __init__(self, database_dir=None, create_if_missing=False):
-        if database_dir is None:
-            database_dir = DEFAULT_DATABASE_DIR
+    def __init__(self, database_dir, create_if_missing=False):
         logger.debug("Opening database %s", database_dir)
         self.db = plyvel.DB(
             database_dir,
