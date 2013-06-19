@@ -1,16 +1,12 @@
 #!/usr/bin/env python
 
-from flask import Flask, abort, make_response, request
-from pigeon import PigeonStore
+from flask import Flask, abort, make_response
 from socket import inet_aton, error as socket_error
 
+from .db import Database
+
 app = Flask(__name__)
-
-
-@app.before_first_request
-def open_store():
-    global p
-    p = PigeonStore()
+db = Database()
 
 
 @app.route('/ip/<ip>')
@@ -20,7 +16,7 @@ def lookup(ip):
     except socket_error:
         abort(400)
 
-    info_as_json = p.lookup(k)
+    info_as_json = db.lookup(k)
     if info_as_json is None:
         abort(404)
 

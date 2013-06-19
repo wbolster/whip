@@ -1,8 +1,4 @@
 
-"""
-Pigeon, fast IP Geo lookup
-"""
-
 import csv
 import logging
 from math import ceil
@@ -13,7 +9,7 @@ import plyvel
 import simplejson as json
 
 
-__all__ = ['PigeonStore']
+__all__ = ['Database']
 
 
 BATCH_SIZE = 20 * 1000
@@ -80,7 +76,7 @@ def transform_record(rec):
 # Public API
 #
 
-class PigeonStore(object):
+class Database(object):
     def __init__(self, database_dir=None, create_if_missing=False):
         if database_dir is None:
             database_dir = DEFAULT_DATABASE_DIR

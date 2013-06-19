@@ -9,17 +9,17 @@ import time
 
 import aaargh
 
-from pigeon import PigeonStore
+from whip import Database
 
-logger = logging.getLogger('pigeon')
+logger = logging.getLogger(__name__)
 
 
 def json_pp(s):
     return json.dumps(json.loads(s), indent=2)
 
 
-def lookup_and_print(p, ip):
-    value = p.lookup(inet_aton(ip))
+def lookup_and_print(db, ip):
+    value = db.lookup(inet_aton(ip))
     if value is None:
         print("No hit found")
     else:
@@ -34,24 +34,24 @@ app.arg('--database-dir')
 @app.cmd_arg('input', type=file, nargs='?', default=sys.stdin)
 def load_data(input, database_dir):
     logger.info("Loading data from %s", input)
-    p = PigeonStore(database_dir, create_if_missing=True)
-    p.load(input)
+    db = Database(database_dir, create_if_missing=True)
+    db.load(input)
 
 
 @app.cmd(name="lookup")
 @app.cmd_arg('ips', help="The IP address(es) to lookup", nargs='+')
 def lookup(ips, database_dir):
-    p = PigeonStore(database_dir)
+    db = Database(database_dir)
     for ip in ips:
-        lookup_and_print(p, ip)
+        lookup_and_print(db, ip)
 
 
 @app.cmd(name="shell")
 def shell(database_dir):
-    p = PigeonStore(database_dir)
+    db = Database(database_dir)
     while True:
         ip = raw_input('IP: ')
-        lookup_and_print(p, ip)
+        lookup_and_print(db, ip)
 
 
 @app.cmd(name='perftest', help="Run performance test")
@@ -59,13 +59,13 @@ def shell(database_dir):
              help="The number of iterations")
 def perftest(iterations, database_dir):
     logger.info("Running %d iterations", iterations)
-    p = PigeonStore(database_dir)
+    db = Database(database_dir)
     size = 4
 
     # Use a sliding window over random data to obtain 4 bytes at a time
     rand_bytes = os.urandom(iterations + size - 1)
 
-    lookup = p.lookup
+    lookup = db.lookup
     start_time = time.time()
     for n in xrange(iterations):
         lookup(rand_bytes[n:n + size])
