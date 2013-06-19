@@ -1,2 +1,4 @@
+/*.egg-info/
 /conf/
 /db/
+/dist/
