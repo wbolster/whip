@@ -1,4 +1,5 @@
 aaargh
 Flask
+nose
 plyvel
 simplejson
