@@ -2,9 +2,27 @@
 import heapq
 import itertools
 import operator
+import socket
+import struct
+
+__all__ = [
+    'int_to_ip',
+    'merge_ranges',
+]
+
 
 EVENT_TYPE_BEGIN = 0
 EVENT_TYPE_END = 1
+
+
+def int_to_ip(n, _ntoa=socket.inet_ntoa, _pack=struct.Struct('>L').pack):
+    """Convert an integer into dot-decimal notation.
+
+    This function converts a (max 32 bit) integer into the common
+    notation for IP addresses. Example: ``0x01020304`` becomes
+    *1.2.3.4*.
+    """
+    return _ntoa(_pack(n))
 
 
 def merge_ranges(inputs):

@@ -1,7 +1,21 @@
 
-from nose.tools import assert_list_equal
+from nose.tools import assert_equal, assert_list_equal
 
-from whip.util import merge_ranges
+from whip.util import int_to_ip, merge_ranges
+
+
+def test_int_to_ip():
+
+    items = [
+        (123, '0.0.0.123'),
+        (1234567890, '73.150.2.210'),
+        (0x010203ff, '1.2.3.255'),
+        (0x10111213, '16.17.18.19'),
+    ]
+
+    for n, expected in items:
+        actual = int_to_ip(n)
+        assert_equal(actual, expected)
 
 
 def test_merge_ranges():
