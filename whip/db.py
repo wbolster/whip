@@ -9,11 +9,6 @@ import plyvel
 import simplejson as json
 
 
-__all__ = ['Database']
-
-
-BATCH_SIZE = 20 * 1000
-DEFAULT_DATABASE_DIR = 'db/'
 logger = logging.getLogger(__name__)
 
 
