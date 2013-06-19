@@ -6,7 +6,8 @@ from socket import inet_aton, error as socket_error
 from .db import Database
 
 app = Flask(__name__)
-db = Database()
+app.config.from_envvar('WHIP_SETTINGS')
+db = Database(app.config['DATABASE_DIR'])
 
 
 @app.route('/ip/<ip>')
