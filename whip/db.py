@@ -14,10 +14,9 @@ logger = logging.getLogger(__name__)
 IP_STRUCT = struct.Struct('>L')
 
 
-def incr_ip(ip):
-    n = IP_STRUCT.unpack(ip)[0] + 1
+def incr_ip(ip, _unpack=IP_STRUCT.unpack, _pack=IP_STRUCT.pack):
     try:
-        return IP_STRUCT.pack(n)
+        return _pack(_unpack(ip)[0] + 1)
     except struct.error:
         return None
 
