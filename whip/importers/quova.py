@@ -173,7 +173,7 @@ if __name__ == '__main__':
             )
 
         it = importer.iter_records()
-        whip_db.merge(it)
+        whip_db.load(it)
 
     finally:
         tmp_db.close()
