@@ -95,6 +95,19 @@ class Database(object):
         # Refresh iterator so that it sees the new data
         self._make_iter()
 
+    def merge(self, it):
+        for n, item in enumerate(it, 1):
+            begin_ip, end_ip, data = item
+
+            key = socket.inet_aton(begin_ip)
+            value = socket.inet_aton(end_ip) + json.dumps(data)
+            self.db.put(key, value)
+
+            if n % 100000 == 0:
+                logger.info('Merged %d records', n)
+
+        self._make_iter()
+
     def lookup(self, ip):
         """Lookup a single ip address in the database"""
         range_key = incr_ip(ip)
