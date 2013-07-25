@@ -1,6 +1,5 @@
 
 import logging
-import struct
 import socket
 
 import plyvel
@@ -8,15 +7,6 @@ import simplejson as json
 
 
 logger = logging.getLogger(__name__)
-
-IP_STRUCT = struct.Struct('>L')
-
-
-def incr_ip(ip, _unpack=IP_STRUCT.unpack, _pack=IP_STRUCT.pack):
-    try:
-        return _pack(_unpack(ip)[0] + 1)
-    except struct.error:
-        return None
 
 
 class Database(object):
