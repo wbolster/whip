@@ -36,16 +36,17 @@ class Database(object):
         after its construction, but this is not a problem since the data
         set is static.
         """
-        self.iter = self.db.iterator(reverse=True)
+        self.iter = self.db.iterator()
 
     def load(self, it):
         """Load data from an importer iterable"""
         for n, item in enumerate(it, 1):
             begin_ip, end_ip, data = item
 
-            # The start IP is the key; the end IP is prepended to the value
-            key = socket.inet_aton(begin_ip)
-            value = socket.inet_aton(end_ip) + json.dumps(data)
+            begin_ip_bytes = socket.inet_aton(begin_ip)
+            end_ip_bytes = socket.inet_aton(end_ip)
+            key = end_ip_bytes
+            value = begin_ip_bytes + json.dumps(data)
             self.db.put(key, value)
 
             if n % 100000 == 0:
@@ -55,18 +56,26 @@ class Database(object):
         self._make_iter()
 
     def lookup(self, ip):
-        """Lookup a single ip address in the database"""
-        range_key = incr_ip(ip)
-        self.iter.seek(range_key)
+        """Lookup a single IP address in the database
+
+        This either returns the stored information, or `None` if no
+        information was found.
+        """
+
+        # The database key stores the end IP of all ranges, so a simple
+        # seek positions the iterator at the right key (if found).
+        self.iter.seek(ip)
         try:
             key, value = next(self.iter)
         except StopIteration:
-            # Start of range, no hit
+            # Past any range in the database: no hit
             return None
 
-        # Looked up ip must be within the range
-        end = value[:4]
-        if ip > end:
+        # Check range boundaries. The first 4 bytes store the begin IP.
+        # If the IP currently being looked up is in a gap, there is no
+        # hit after all.
+        if ip < value[:4]:
             return None
 
+        # The remainder of the value is the actual data to return
         return value[4:]
