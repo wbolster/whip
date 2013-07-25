@@ -62,7 +62,7 @@ def merge_ranges(inputs):
         # Apply begin/end changes
         for _, event_type, input_id, data in changes:
             if event_type == EVENT_TYPE_BEGIN:
-                assert data not in active
+                assert input_id not in active
                 active[input_id] = data
             elif event_type == EVENT_TYPE_END:
                 del active[input_id]
