@@ -57,7 +57,7 @@ def merge_ranges(inputs):
         # Yield output range from the previous position up to the
         # current position, containing all currently valid values.
         if active:
-            yield previous_position, position - 1, sorted(active.itervalues())
+            yield previous_position, position - 1, active.values()
 
         # Apply begin/end changes
         for _, event_type, input_id, data in changes:
