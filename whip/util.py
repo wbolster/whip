@@ -37,16 +37,19 @@ def merge_ranges(inputs):
     iterates over it, yielding a snapshot at each change point.
     """
 
-    def generate_changes(it):
+    def generate_changes(it, input_id):
         for begin, end, data in it:
             assert begin <= end
-            yield begin, EVENT_TYPE_BEGIN, data
-            yield end + 1, EVENT_TYPE_END, data
+            yield begin, EVENT_TYPE_BEGIN, input_id, data
+            yield end + 1, EVENT_TYPE_END, input_id, None
 
-    changes_generators = [generate_changes(input) for input in inputs]
+    changes_generators = [
+        generate_changes(input, input_id)
+        for input_id, input in enumerate(inputs)
+    ]
     all_changes = heapq.merge(*changes_generators)
     grouper = itertools.groupby(all_changes, operator.itemgetter(0))
-    active = set()
+    active = {}
     previous_position = None
 
     for position, changes in grouper:
@@ -54,15 +57,15 @@ def merge_ranges(inputs):
         # Yield output range from the previous position up to the
         # current position, containing all currently valid values.
         if active:
-            yield previous_position, position - 1, sorted(active)
+            yield previous_position, position - 1, sorted(active.itervalues())
 
         # Apply begin/end changes
-        for _, event_type, data in changes:
+        for _, event_type, input_id, data in changes:
             if event_type == EVENT_TYPE_BEGIN:
                 assert data not in active
-                active.add(data)
+                active[input_id] = data
             elif event_type == EVENT_TYPE_END:
-                active.remove(data)
+                del active[input_id]
 
         # Remember current position
         previous_position = position
