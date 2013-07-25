@@ -1,3 +1,4 @@
+# encoding: UTF-8
 """
 Importer for Quova data sets.
 """
@@ -8,9 +9,8 @@ import itertools
 import logging
 import math
 
-import plyvel
+from whip.util import int_to_ip
 
-from whip.util import int_to_ip, open_file
 
 logger = logging.getLogger(__name__)
 
@@ -140,41 +140,3 @@ class QuovaImporter(object):
                 out['timezone'] = '%+03d:%02d' % (hours, minutes)
 
             yield begin_ip, end_ip, out
-
-
-if __name__ == '__main__':
-
-    import argparse
-
-    from whip.db import Database
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--db-dir', required=True)
-    parser.add_argument('--data', required=True)
-    parser.add_argument('--reference', '--ref', required=True)
-    parser.add_argument('--tmp-dir', required=True)
-    args = parser.parse_args()
-
-    logging.basicConfig(level=logging.DEBUG)
-
-    whip_db = Database(args.db_dir, create_if_missing=True)
-
-    logger.info("Creating temporary database in %r", args.tmp_dir)
-    tmp_db = plyvel.DB(
-        args.tmp_dir,
-        create_if_missing=True,
-    )
-
-    try:
-        importer = QuovaImporter(
-            data_fp=open_file(args.data),
-            ref_fp=open_file(args.reference),
-            tmp_db=tmp_db.prefixed_db('xyz'),
-            )
-
-        it = importer.iter_records()
-        whip_db.load(it)
-
-    finally:
-        tmp_db.close()
-        plyvel.destroy_db(args.tmp_dir)

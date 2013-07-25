@@ -49,7 +49,7 @@ class Database(object):
             self.db.put(key, value)
 
             if n % 100000 == 0:
-                logger.info('Merged %d records', n)
+                logger.info('%d records stored', n)
 
         # Refresh iterator so that it sees the new data
         self._make_iter()
