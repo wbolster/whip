@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import logging
-import json
 import os
 from socket import inet_aton
 import sys
@@ -9,6 +8,7 @@ import time
 
 import aaargh
 import plyvel
+import simplejson as json
 
 from whip import Database
 from whip.util import open_file
