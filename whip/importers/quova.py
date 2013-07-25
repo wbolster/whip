@@ -50,7 +50,7 @@ QuovaRecord = collections.namedtuple('QuovaRecord', (
 
 
 def _clean(v):
-    if v == 'unknown':
+    if v in ('', 'unknown'):
         return None
 
     return v
@@ -109,6 +109,8 @@ class QuovaImporter(object):
                 'line_speed': record.linespeed,
                 'ip_routingtype': record.ip_routingtype,
                 'asn': int(record.asn),
+
+                # Network information (reference database lookups)
                 'sld': _clean(ref_db.get('sld-' + record.sld_id)),
                 'tld': _clean(ref_db.get('tld-' + record.tld_id)),
                 'reg': _clean(ref_db.get('org-' + record.reg_org_id)),
