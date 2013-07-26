@@ -6,8 +6,16 @@ from socket import inet_aton, error as socket_error
 from .db import Database
 
 app = Flask(__name__)
-app.config.from_envvar('WHIP_SETTINGS')
-db = Database(app.config['DATABASE_DIR'])
+app.config.from_envvar('WHIP_SETTINGS', silent=True)
+
+
+db = None
+
+
+@app.before_first_request
+def _open_db():
+    global db
+    db = Database(app.config['DATABASE_DIR'])
 
 
 @app.route('/ip/<ip>')
@@ -24,19 +32,3 @@ def lookup(ip):
     response = make_response(info_as_json)
     response.headers['Content-type'] = 'application/json'
     return response
-
-
-if __name__ == '__main__':
-    import argparse
-    import sys
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--host', default='localhost')
-    parser.add_argument('--port', default=5555, type=int)
-    parser.add_argument('--debug', default=False, action='store_true')
-
-    args = parser.parse_args()
-    try:
-        app.run(**vars(args))
-    except KeyboardInterrupt:
-        sys.stderr.write("Aborting...\n")

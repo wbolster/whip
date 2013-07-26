@@ -101,6 +101,15 @@ def perftest(iterations, database_dir):
     print(out)
 
 
+@app.cmd
+@app.cmd_arg('--host', default='0')
+@app.cmd_arg('--port', type=int, default=5555)
+def serve(host, port, database_dir):
+    from whip.web import app
+    app.config['DATABASE_DIR'] = database_dir
+    app.run(host=host, port=port)
+
+
 def main():
     logging.basicConfig(
         format='%(asctime)s (%(name)s) %(levelname)s: %(message)s',
