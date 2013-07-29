@@ -34,9 +34,13 @@ app.arg('--database-dir', default='db')
 
 
 @app.cmd(name='load', help="Load data")
-@app.cmd_arg('--data-dir', required=True)
+@app.cmd_arg('--data-dirs', nargs='+', required=True)
 @app.cmd_arg('--tmp-dir')
-def load_data(database_dir, data_dir, tmp_dir):
+def load_data(database_dir, data_dirs, tmp_dir):
+
+    logger.info(
+        "Importing %d data directories: %r",
+        len(data_dirs), data_dirs)
 
     if tmp_dir is None:
         tmp_dir = tempfile.mkdtemp(prefix='whip-', suffix='.ldb')
@@ -44,14 +48,31 @@ def load_data(database_dir, data_dir, tmp_dir):
         assert not os.path.exists(tmp_dir)
 
     logger.info("Creating temporary database in %r", tmp_dir)
-    tmp_db = plyvel.DB(tmp_dir, create_if_missing=True)
+    tmp_db = plyvel.DB(tmp_dir, create_if_missing=True, max_open_files=128)
 
     try:
         from whip.importers.quova import QuovaImporter
+        from whip.util import ipv4_int_to_str, ipv4_str_to_int, merge_ranges
 
+        prefix_generator = (chr(i) for i in xrange(256))
+        iters = []
+        for data_dir in data_dirs:
+            prefix = next(prefix_generator)
+            importer = QuovaImporter(
+                dir=data_dir,
+                tmp_db=tmp_db.prefixed_db(prefix))
+
+            iters.append(
+                (ipv4_str_to_int(begin), ipv4_str_to_int(end), data)
+                for begin, end, data in importer.iter_records()
+            )
+
+        merged = merge_ranges(*iters)
+        it = (
+            (ipv4_int_to_str(begin), ipv4_int_to_str(end), data)
+            for begin, end, data in merged
+        )
         db = Database(database_dir, create_if_missing=True)
-        importer = QuovaImporter(dir=data_dir, tmp_db=tmp_db)
-        it = importer.iter_records()
         db.load(it)
 
     finally:
