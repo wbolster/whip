@@ -4,7 +4,7 @@ from nose.tools import assert_equal, assert_list_equal
 from whip.util import ipv4_int_to_str, merge_ranges
 
 
-def test_int_to_ip():
+def test_ipv4_integer_conversion():
 
     items = [
         (123, '0.0.0.123'),
@@ -13,9 +13,8 @@ def test_int_to_ip():
         (0x10111213, '16.17.18.19'),
     ]
 
-    for n, expected in items:
-        actual = ipv4_int_to_str(n)
-        assert_equal(actual, expected)
+    for n, s in items:
+        assert_equal(ipv4_int_to_str(n), s)
 
 
 def test_merge_ranges():
