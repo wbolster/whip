@@ -15,6 +15,8 @@ class Database(object):
         self.db = plyvel.DB(
             database_dir,
             create_if_missing=create_if_missing,
+            write_buffer_size=16 * 1024 * 1024,
+            max_open_files=512,
             lru_cache_size=128 * 1024 * 1024)
         self._make_iter()
 
@@ -32,7 +34,6 @@ class Database(object):
         """Load data from an importer iterable"""
         for n, item in enumerate(it, 1):
             begin_ip, end_ip, data = item
-
             begin_ip_bytes = socket.inet_aton(begin_ip)
             end_ip_bytes = socket.inet_aton(end_ip)
             key = end_ip_bytes
