@@ -28,7 +28,7 @@ class Database(object):
         after its construction, but this is not a problem since the data
         set is static.
         """
-        self.iter = self.db.iterator()
+        self.iter = self.db.iterator(include_key=False)
 
     def load(self, it):
         """Load data from an importer iterable"""
@@ -57,7 +57,7 @@ class Database(object):
         # seek positions the iterator at the right key (if found).
         self.iter.seek(ip)
         try:
-            key, value = next(self.iter)
+            value = next(self.iter)
         except StopIteration:
             # Past any range in the database: no hit
             return None
