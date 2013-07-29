@@ -54,5 +54,5 @@ def test_merge_ranges():
     ]
 
     # Sort data before comparing
-    actual = [(b, e, sorted(data)) for b, e, data in merge_ranges(inputs)]
+    actual = [(b, e, sorted(data)) for b, e, data in merge_ranges(*inputs)]
     assert_list_equal(actual, expected)

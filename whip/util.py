@@ -27,7 +27,7 @@ def int_to_ip(n, _ntoa=socket.inet_ntoa, _pack=struct.Struct('>L').pack):
     return _ntoa(_pack(n))
 
 
-def merge_ranges(inputs):
+def merge_ranges(*inputs):
     """
     Merge multiple ranges into a combined stream of ranges.
 
