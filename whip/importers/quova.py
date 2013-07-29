@@ -6,7 +6,6 @@ Importer for Quova data sets.
 import collections
 import csv
 import datetime
-import glob
 import itertools
 import logging
 import math
