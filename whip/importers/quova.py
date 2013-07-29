@@ -14,8 +14,12 @@ from whip.util import int_to_ip
 
 logger = logging.getLogger(__name__)
 
+
+# Header names used in the reference files
 REF_HEADERS = frozenset(['carrier', 'org', 'sld', 'tld'])
 
+
+# Description of all fields in the .dat files
 QuovaRecord = collections.namedtuple('QuovaRecord', (
     'start_ip_int',
     'end_ip_int',
@@ -50,6 +54,7 @@ QuovaRecord = collections.namedtuple('QuovaRecord', (
 
 
 def _clean(v):
+    """Cleanup an input value"""
     if v in ('', 'unknown'):
         return None
 
@@ -57,6 +62,7 @@ def _clean(v):
 
 
 def _parse_reference_set(fp):
+    """Generator to parse a reference set into records"""
     ref_reader = csv.reader(fp, delimiter='|')
 
     for row in ref_reader:
@@ -77,9 +83,10 @@ def _parse_reference_set(fp):
 
 
 class QuovaImporter(object):
-    def __init__(self, data_fp, ref_fp, tmp_db):
-        self.data_fp = data_fp
-        self.ref_fp = ref_fp
+    """Importer for Quova data sets."""
+
+    def __init__(self, dir, tmp_db):
+        self.dir = dir
         self.tmp_db = tmp_db
 
     def iter_records(self):
