@@ -127,7 +127,7 @@ class QuovaImporter(object):
                 'cidr': int(record.cidr),
                 'connection_type': record.connectiontype,
                 'line_speed': record.linespeed,
-                'ip_routingtype': record.ip_routingtype,
+                'ip_routing_type': record.ip_routingtype,
                 'asn': int(record.asn),
 
                 # Network information (reference database lookups)
