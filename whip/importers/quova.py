@@ -18,6 +18,8 @@ from whip.util import ipv4_int_to_str, open_file
 logger = logging.getLogger(__name__)
 
 
+ISO8601_DATETIME_FMT = '%Y-%m-%dT%H:%M:%S'
+
 # Regular expression to match file names like
 # "EDITION_Gold_YYYY-MM-DD_vXXX.dat.gz"
 DATA_FILE_RE = re.compile(r'''
@@ -123,7 +125,7 @@ class QuovaImporter(object):
 
         logger.info(
             "Detected date %s and version %d for data file %r",
-            dt.strftime('%Y-%m-%dT%H:%M:%S'), version, data_file)
+            dt.strftime(ISO8601_DATETIME_FMT), version, data_file)
 
         reference_file = data_file.replace('.dat.gz', '.ref.gz')
         if not os.path.exists(reference_file):
@@ -150,6 +152,9 @@ class QuovaImporter(object):
             end_ip = ipv4_int_to_str(int(record.end_ip_int))
 
             out = {
+                # Data file information
+                'datetime': dt.strftime(ISO8601_DATETIME_FMT),
+
                 # Network information
                 'begin': begin_ip,
                 'end': end_ip,
