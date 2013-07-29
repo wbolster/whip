@@ -1,7 +1,7 @@
 
 from nose.tools import assert_equal, assert_list_equal
 
-from whip.util import ipv4_int_to_str, merge_ranges
+from whip.util import ipv4_int_to_str, ipv4_str_to_int, merge_ranges
 
 
 def test_ipv4_integer_conversion():
@@ -15,6 +15,7 @@ def test_ipv4_integer_conversion():
 
     for n, s in items:
         assert_equal(ipv4_int_to_str(n), s)
+        assert_equal(ipv4_str_to_int(s), n)
 
 
 def test_merge_ranges():

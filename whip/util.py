@@ -17,14 +17,24 @@ EVENT_TYPE_BEGIN = 0
 EVENT_TYPE_END = 1
 
 
-def ipv4_int_to_str(n, _ntoa=socket.inet_ntoa, _pack=struct.Struct('>L').pack):
-    """Convert an integer into dot-decimal notation.
+def ipv4_int_to_str(n, _inet_ntoa=socket.inet_ntoa,
+                    _pack=struct.Struct('>L').pack):
+    """Convert an integer into an IPv4 address string.
 
     This function converts a (max 32 bit) integer into the common
-    notation for IP addresses. Example: ``0x01020304`` becomes
-    *1.2.3.4*.
+    dot-decimal notation for IP addresses. Example: ``0x01020304``
+    becomes *1.2.3.4*.
     """
-    return _ntoa(_pack(n))
+    return _inet_ntoa(_pack(n))
+
+
+def ipv4_str_to_int(s, _inet_aton=socket.inet_aton,
+                    _unpack=struct.Struct('>L').unpack):
+    """Convert an IPv4 address string into an integer.
+
+    This is the reverse of :py:func:`ipv4_int_to_str`.
+    """
+    return _unpack(_inet_aton(s))[0]
 
 
 def merge_ranges(*inputs):
