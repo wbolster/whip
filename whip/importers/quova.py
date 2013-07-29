@@ -12,7 +12,7 @@ import math
 import os
 import re
 
-from whip.util import int_to_ip, open_file
+from whip.util import ipv4_int_to_str, open_file
 
 
 logger = logging.getLogger(__name__)
@@ -146,8 +146,8 @@ class QuovaImporter(object):
 
         for n, record in enumerate(it, 1):
 
-            begin_ip = int_to_ip(int(record.start_ip_int))
-            end_ip = int_to_ip(int(record.end_ip_int))
+            begin_ip = ipv4_int_to_str(int(record.start_ip_int))
+            end_ip = ipv4_int_to_str(int(record.end_ip_int))
 
             out = {
                 # Network information
