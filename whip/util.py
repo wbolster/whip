@@ -7,7 +7,7 @@ import struct
 import subprocess
 
 __all__ = [
-    'int_to_ip',
+    'ipv4_int_to_str',
     'merge_ranges',
     'open_file',
 ]
@@ -17,7 +17,7 @@ EVENT_TYPE_BEGIN = 0
 EVENT_TYPE_END = 1
 
 
-def int_to_ip(n, _ntoa=socket.inet_ntoa, _pack=struct.Struct('>L').pack):
+def ipv4_int_to_str(n, _ntoa=socket.inet_ntoa, _pack=struct.Struct('>L').pack):
     """Convert an integer into dot-decimal notation.
 
     This function converts a (max 32 bit) integer into the common
