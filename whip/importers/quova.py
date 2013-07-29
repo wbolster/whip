@@ -8,11 +8,24 @@ import csv
 import itertools
 import logging
 import math
+import re
 
 from whip.util import int_to_ip
 
 
 logger = logging.getLogger(__name__)
+
+
+# Regular expression to match file names like
+# "EDITION_Gold_YYYY-MM-DD_vXXX.dat.gz"
+FILE_RE = re.compile(r'''
+    ^
+    EDITION_Gold_
+    (?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})  # date component
+    _v(?P<version>\d+)  # version number
+    \.(?P<type>(?:dat|ref))\.gz  # file type
+    $
+    ''', re.VERBOSE)
 
 
 # Header names used in the reference files
