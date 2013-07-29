@@ -5,12 +5,15 @@ Importer for Quova data sets.
 
 import collections
 import csv
+import datetime
+import glob
 import itertools
 import logging
 import math
+import os
 import re
 
-from whip.util import int_to_ip
+from whip.util import int_to_ip, open_file
 
 
 logger = logging.getLogger(__name__)
@@ -18,12 +21,12 @@ logger = logging.getLogger(__name__)
 
 # Regular expression to match file names like
 # "EDITION_Gold_YYYY-MM-DD_vXXX.dat.gz"
-FILE_RE = re.compile(r'''
+DATA_FILE_RE = re.compile(r'''
     ^
     EDITION_Gold_
     (?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})  # date component
     _v(?P<version>\d+)  # version number
-    \.(?P<type>(?:dat|ref))\.gz  # file type
+    \.dat\.gz  # file type
     $
     ''', re.VERBOSE)
 
@@ -85,13 +88,7 @@ def _parse_reference_set(fp):
                 "header line, got %r" % (row))
 
         ref_type, n, _ = row
-        n = int(n)
-
-        logger.info(
-            "Reading %d reference records for type '%s'",
-            n, ref_type)
-
-        for ref_id, value in itertools.islice(ref_reader, n):
+        for ref_id, value in itertools.islice(ref_reader, int(n)):
             yield ref_type, ref_id, value
 
 
@@ -104,18 +101,51 @@ class QuovaImporter(object):
 
     def iter_records(self):
 
-        logger.info("Populating temporary reference database")
-        ref_db = self.tmp_db
-        for ref_type, ref_id, value in _parse_reference_set(self.ref_fp):
-            key = '{}-{}'.format(ref_type, ref_id)
-            ref_db.put(key, value)
+        files = os.listdir(self.dir)
+        data_files = [d for d in files if DATA_FILE_RE.match(d) is not None]
+        if not data_files:
+            raise RuntimeError(
+                "No data file (.dat.gz) found in in directory %r"
+                % dir)
+        elif len(data_files) != 1:
+            raise RuntimeError(
+                "Multiple data files (.dat.gz) found in in directory %r"
+                % dir)
 
-        logger.info("Reading data file")
-        reader = csv.reader(self.data_fp, delimiter='|')
+        data_file = os.path.join(self.dir, data_files[0])
+        logger.info("Found data file %r", data_file)
+
+        match = DATA_FILE_RE.match(os.path.basename(data_file))
+        match_dict = match.groupdict()
+        version = int(match_dict['version'])
+        dt = datetime.datetime(int(match_dict['year']),
+                               int(match_dict['month']),
+                               int(match_dict['day']))
+
+        logger.info(
+            "Detected date %s and version %d for data file %r",
+            dt.strftime('%Y-%m-%dT%H:%M:%S'), version, data_file)
+
+        reference_file = data_file.replace('.dat.gz', '.ref.gz')
+        if not os.path.exists(reference_file):
+            raise RuntimeError("Reference file %r not found" % reference_file)
+
+        logger.info(
+            "Building temporary reference database from %r",
+            reference_file)
+
+        ref_fp = open_file(reference_file)
+        ref_db = self.tmp_db
+        for ref_type, ref_id, value in _parse_reference_set(ref_fp):
+            ref_db.put(ref_type + ref_id, value)
+
+        logger.info("Reading data file %r", data_file)
+
+        reader = csv.reader(open_file(data_file), delimiter='|')
         it = (map(_clean, item) for item in reader)
         it = itertools.starmap(QuovaRecord, it)
 
-        for record in it:
+        for n, record in enumerate(it, 1):
 
             begin_ip = int_to_ip(int(record.start_ip_int))
             end_ip = int_to_ip(int(record.end_ip_int))
@@ -131,10 +161,10 @@ class QuovaImporter(object):
                 'asn': int(record.asn),
 
                 # Network information (reference database lookups)
-                'sld': _clean(ref_db.get('sld-' + record.sld_id)),
-                'tld': _clean(ref_db.get('tld-' + record.tld_id)),
-                'reg': _clean(ref_db.get('org-' + record.reg_org_id)),
-                'carrier': _clean(ref_db.get('carrier-' + record.carrier_id)),
+                'sld': _clean(ref_db.get('sld' + record.sld_id)),
+                'tld': _clean(ref_db.get('tld' + record.tld_id)),
+                'reg': _clean(ref_db.get('org' + record.reg_org_id)),
+                'carrier': _clean(ref_db.get('carrier' + record.carrier_id)),
 
                 # Geographic information
                 'continent': record.continent,
@@ -162,3 +192,10 @@ class QuovaImporter(object):
                 out['timezone'] = '%+03d:%02d' % (hours, minutes)
 
             yield begin_ip, end_ip, out
+
+            if n % 100000 == 0:
+                logger.info(
+                    "Read %d records from %r; current position: %s",
+                    n, data_file, begin_ip)
+
+        logger.info("Finished reading %r (%d records)", data_file, n)
