@@ -42,10 +42,13 @@ def ipv4_str_to_int(s, _inet_aton=socket.inet_aton,
 
 
 def ipv4_bytes_to_int(b, _unpack=IPV4_STRUCT.unpack):
+    """Convert a 4 byte string into an integer"""
     return _unpack(b)[0]
 
 
-ipv4_int_to_bytes = IPV4_STRUCT.pack
+def ipv4_int_to_bytes(n, _pack=IPV4_STRUCT.pack):
+    """Convert an integer into 4 byte string"""
+    return _pack(n)
 
 
 def merge_ranges(*inputs):
