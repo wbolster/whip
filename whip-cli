@@ -52,7 +52,7 @@ def load_data(database_dir, data_dirs, tmp_dir):
 
     try:
         from whip.importers.quova import QuovaImporter
-        from whip.util import ipv4_int_to_str, ipv4_str_to_int, merge_ranges
+        from whip.util import ipv4_int_to_str, merge_ranges
 
         prefix_generator = (chr(i) for i in xrange(256))
         iters = []
@@ -62,10 +62,7 @@ def load_data(database_dir, data_dirs, tmp_dir):
                 dir=data_dir,
                 tmp_db=tmp_db.prefixed_db(prefix))
 
-            iters.append(
-                (ipv4_str_to_int(begin), ipv4_str_to_int(end), data)
-                for begin, end, data in importer.iter_records()
-            )
+            iters.append(importer.iter_records())
 
         merged = merge_ranges(*iters)
         it = (

@@ -148,8 +148,11 @@ class QuovaImporter(object):
 
         for n, record in enumerate(it, 1):
 
-            begin_ip = ipv4_int_to_str(int(record.start_ip_int))
-            end_ip = ipv4_int_to_str(int(record.end_ip_int))
+            begin_ip_int = int(record.start_ip_int)
+            end_ip_int = int(record.end_ip_int)
+
+            begin_ip = ipv4_int_to_str(begin_ip_int)
+            end_ip = ipv4_int_to_str(end_ip_int)
 
             out = {
                 # Data file information
@@ -195,7 +198,7 @@ class QuovaImporter(object):
                 minutes = 60 * (tz - math.floor(tz))
                 out['timezone'] = '%+03d:%02d' % (hours, minutes)
 
-            yield begin_ip, end_ip, out
+            yield begin_ip_int, end_ip_int, out
 
             if n % 100000 == 0:
                 logger.info(
