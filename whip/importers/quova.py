@@ -122,10 +122,11 @@ class QuovaImporter(object):
         dt = datetime.datetime(int(match_dict['year']),
                                int(match_dict['month']),
                                int(match_dict['day']))
+        dt_as_str = dt.strftime(ISO8601_DATETIME_FMT)
 
         logger.info(
             "Detected date %s and version %d for data file %r",
-            dt.strftime(ISO8601_DATETIME_FMT), version, data_file)
+            dt_as_str, version, data_file)
 
         reference_file = data_file.replace('.dat.gz', '.ref.gz')
         if not os.path.exists(reference_file):
@@ -152,7 +153,7 @@ class QuovaImporter(object):
 
             out = {
                 # Data file information
-                'datetime': dt.strftime(ISO8601_DATETIME_FMT),
+                'datetime': dt_as_str,
 
                 # Network information
                 'begin': begin_ip,
