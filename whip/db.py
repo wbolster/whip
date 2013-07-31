@@ -1,5 +1,6 @@
 
 import logging
+import operator
 
 import plyvel
 import simplejson as json
@@ -33,13 +34,29 @@ class Database(object):
 
     def load(self, it):
         """Load data from an importer iterable"""
+        extract_datetime = operator.itemgetter('datetime')
+
+        json_encoder = json.JSONEncoder(
+            ensure_ascii=True,
+            check_circular=False,
+            separators=(',', ':'),  # no whitespace
+
+        )
         for n, item in enumerate(it, 1):
             begin_ip_int, end_ip_int, data = item
-            begin_ip_bytes = ipv4_int_to_bytes(begin_ip_int)
-            end_ip_bytes = ipv4_int_to_bytes(end_ip_int)
-            key = end_ip_bytes
-            value = begin_ip_bytes + json.dumps(data)
-            self.db.put(key, value)
+
+            # The data is a list of dicts with a timestamp. Sort
+            # chronologically, putting the most recent information first.
+            data.sort(key=extract_datetime, reverse=True)
+            encoded = json_encoder.encode(data)
+
+            # Store in database. The end IP is stored in the key, the
+            # begin IP and the actual information is stored in the
+            # value.
+            value = ipv4_int_to_bytes(begin_ip_int) + encoded
+            self.db.put(
+                ipv4_int_to_bytes(end_ip_int),
+                value)
 
             if n % 100000 == 0:
                 logger.info('%d records stored', n)
