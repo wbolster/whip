@@ -2,6 +2,7 @@
 
 import logging
 import os
+import shutil
 from socket import inet_aton
 import sys
 import tempfile
@@ -35,18 +36,13 @@ app.arg('--database-dir', default='db')
 
 @app.cmd(name='load', help="Load data")
 @app.cmd_arg('--data-dirs', nargs='+', required=True)
-@app.cmd_arg('--tmp-dir')
-def load_data(database_dir, data_dirs, tmp_dir):
+def load_data(database_dir, data_dirs):
 
     logger.info(
         "Importing %d data directories: %r",
         len(data_dirs), data_dirs)
 
-    if tmp_dir is None:
-        tmp_dir = tempfile.mkdtemp(prefix='whip-', suffix='.ldb')
-    else:
-        assert not os.path.exists(tmp_dir)
-
+    tmp_dir = tempfile.mkdtemp(prefix='whip-', suffix='.ldb')
     logger.info("Creating temporary database in %r", tmp_dir)
     tmp_db = plyvel.DB(tmp_dir, create_if_missing=True, max_open_files=128)
 
@@ -70,7 +66,7 @@ def load_data(database_dir, data_dirs, tmp_dir):
 
     finally:
         tmp_db.close()
-        plyvel.destroy_db(tmp_dir)
+        shutil.rmtree(tmp_dir)
 
 
 @app.cmd(name="lookup")
