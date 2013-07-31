@@ -8,6 +8,7 @@ import subprocess
 
 __all__ = [
     'ipv4_int_to_str',
+    'ipv4_str_to_int',
     'merge_ranges',
     'open_file',
 ]
