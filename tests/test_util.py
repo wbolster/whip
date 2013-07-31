@@ -1,11 +1,16 @@
 
-from nose.tools import assert_equal, assert_list_equal
+from nose.tools import (
+    assert_dict_equal,
+    assert_equal,
+    assert_list_equal,
+)
 
 from whip.util import (
+    dict_substract,
+    ipv4_bytes_to_int,
+    ipv4_int_to_bytes,
     ipv4_int_to_str,
     ipv4_str_to_int,
-    ipv4_int_to_bytes,
-    ipv4_bytes_to_int,
     merge_ranges,
 )
 
@@ -64,3 +69,24 @@ def test_merge_ranges():
     # Sort data before comparing
     actual = [(b, e, sorted(data)) for b, e, data in merge_ranges(*inputs)]
     assert_list_equal(actual, expected)
+
+
+def test_dict_substract():
+
+    ref = dict(a=1, b=2, c=3, d=4)
+
+    d = dict(a=1, b=2, c=3, d=4)
+    dict_substract(d, ref)
+    assert_dict_equal(d, {})
+
+    d = dict(a=1, b=2, c=3, d=5)
+    dict_substract(d, ref)
+    assert_dict_equal(d, dict(d=5))
+
+    d = dict()
+    dict_substract(d, ref)
+    assert_dict_equal(d, {})
+
+    d = dict(a=4, b=3, c=2)
+    dict_substract(d, ref)
+    assert_dict_equal(d, dict(a=4, b=3, c=2))

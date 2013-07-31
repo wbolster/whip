@@ -123,3 +123,10 @@ def open_file(filename):
         fp = open(filename)
 
     return fp
+
+
+def dict_substract(d, ref):
+    """Remove all items from `d` that are also contained in `ref`."""
+    for k, v in ref.iteritems():
+        if k in d and d[k] == v:
+            del d[k]
