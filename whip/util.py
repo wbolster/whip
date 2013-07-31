@@ -9,6 +9,8 @@ import subprocess
 __all__ = [
     'ipv4_int_to_str',
     'ipv4_str_to_int',
+    'ipv4_int_to_bytes',
+    'ipv4_bytes_to_int',
     'merge_ranges',
     'open_file',
 ]
@@ -37,6 +39,13 @@ def ipv4_str_to_int(s, _inet_aton=socket.inet_aton,
     This is the reverse of :py:func:`ipv4_int_to_str`.
     """
     return _unpack(_inet_aton(s))[0]
+
+
+def ipv4_bytes_to_int(b, _unpack=IPV4_STRUCT.unpack):
+    return _unpack(b)[0]
+
+
+ipv4_int_to_bytes = IPV4_STRUCT.pack
 
 
 def merge_ranges(*inputs):
