@@ -16,9 +16,10 @@ __all__ = [
 EVENT_TYPE_BEGIN = 0
 EVENT_TYPE_END = 1
 
+IPV4_STRUCT = struct.Struct('>L')
 
-def ipv4_int_to_str(n, _inet_ntoa=socket.inet_ntoa,
-                    _pack=struct.Struct('>L').pack):
+
+def ipv4_int_to_str(n, _inet_ntoa=socket.inet_ntoa, _pack=IPV4_STRUCT.pack):
     """Convert an integer into an IPv4 address string.
 
     This function converts a (max 32 bit) integer into the common
@@ -29,7 +30,7 @@ def ipv4_int_to_str(n, _inet_ntoa=socket.inet_ntoa,
 
 
 def ipv4_str_to_int(s, _inet_aton=socket.inet_aton,
-                    _unpack=struct.Struct('>L').unpack):
+                    _unpack=IPV4_STRUCT.unpack):
     """Convert an IPv4 address string into an integer.
 
     This is the reverse of :py:func:`ipv4_int_to_str`.
