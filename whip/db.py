@@ -1,9 +1,10 @@
 
 import logging
-import socket
 
 import plyvel
 import simplejson as json
+
+from whip.util import ipv4_int_to_bytes
 
 
 logger = logging.getLogger(__name__)
@@ -33,9 +34,9 @@ class Database(object):
     def load(self, it):
         """Load data from an importer iterable"""
         for n, item in enumerate(it, 1):
-            begin_ip, end_ip, data = item
-            begin_ip_bytes = socket.inet_aton(begin_ip)
-            end_ip_bytes = socket.inet_aton(end_ip)
+            begin_ip_int, end_ip_int, data = item
+            begin_ip_bytes = ipv4_int_to_bytes(begin_ip_int)
+            end_ip_bytes = ipv4_int_to_bytes(end_ip_int)
             key = end_ip_bytes
             value = begin_ip_bytes + json.dumps(data)
             self.db.put(key, value)
