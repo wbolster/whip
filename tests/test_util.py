@@ -6,7 +6,8 @@ from nose.tools import (
 )
 
 from whip.util import (
-    dict_substract,
+    dict_diff,
+    dict_patch,
     ipv4_bytes_to_int,
     ipv4_int_to_bytes,
     ipv4_int_to_str,
@@ -71,22 +72,37 @@ def test_merge_ranges():
     assert_list_equal(actual, expected)
 
 
-def test_dict_substract():
+def test_dict_patching():
 
-    ref = dict(a=1, b=2, c=3, d=4)
+    base = dict(a=1, b=2, c=3, d=4)
 
-    d = dict(a=1, b=2, c=3, d=4)
-    dict_substract(d, ref)
-    assert_dict_equal(d, {})
+    inputs = [
+        (dict(a=1, b=2, c=3, d=4),
+         {},
+         ()),
 
-    d = dict(a=1, b=2, c=3, d=5)
-    dict_substract(d, ref)
-    assert_dict_equal(d, dict(d=5))
+        ({},
+         {},
+         ('a', 'b', 'c', 'd')),
 
-    d = dict()
-    dict_substract(d, ref)
-    assert_dict_equal(d, {})
+        (dict(a=1, b=2, c=3, d=5),
+         dict(d=5),
+         ()),
 
-    d = dict(a=4, b=3, c=2)
-    dict_substract(d, ref)
-    assert_dict_equal(d, dict(a=4, b=3, c=2))
+        (dict(a=4, b=3, c=2),
+         dict(a=4, b=3, c=2),
+         ('d')),
+
+        (dict(a=1, b=2, e=5),
+         dict(e=5),
+         ('c', 'd')),
+    ]
+
+    for original, expected_to_set, expected_to_delete in inputs:
+        to_set, to_delete = dict_diff(original, base)
+        assert_dict_equal(to_set, expected_to_set)
+        assert_list_equal(sorted(to_delete), sorted(expected_to_delete))
+
+        recreated = base.copy()
+        dict_patch(recreated, to_set, to_delete)
+        assert_dict_equal(original, recreated)

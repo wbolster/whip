@@ -125,8 +125,33 @@ def open_file(filename):
     return fp
 
 
-def dict_substract(d, ref):
-    """Remove all items from `d` that are also contained in `ref`."""
-    for k, v in ref.iteritems():
-        if k in d and d[k] == v:
-            del d[k]
+def dict_diff(d, base):
+    """
+    Calculate differences between a dict and a base dict.
+
+    The return value is a tuple with two items: a `to_set` dictionary
+    with all items in `d` that were either unset or changed, and
+    a `to_delete` tuple with all removed keys.
+
+    See also dict_patch().
+    """
+    to_set = {}
+    for k, v in d.iteritems():
+        if not k in base:
+            to_set[k] = d[k]  # addition
+        elif base[k] != v:
+            to_set[k] = v  # mutation
+
+    to_delete = tuple(base.viewkeys() - d.viewkeys())
+    return to_set, to_delete
+
+
+def dict_patch(d, to_set, to_delete):
+    """
+    Patches a dictionary using a changes dict and a list of deletions.
+
+    This is the reverse of dict_diff().
+    """
+    d.update(to_set)
+    for k in to_delete:
+        del d[k]
