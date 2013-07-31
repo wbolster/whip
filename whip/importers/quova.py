@@ -78,7 +78,7 @@ def _clean(v):
     return v
 
 
-def _parse_reference_set(fp):
+def _build_reference_db(db, fp):
     """Generator to parse a reference set into records"""
     ref_reader = csv.reader(fp, delimiter='|')
 
@@ -90,7 +90,7 @@ def _parse_reference_set(fp):
 
         ref_type, n, _ = row
         for ref_id, value in itertools.islice(ref_reader, int(n)):
-            yield ref_type, ref_id, value
+            db.put(ref_type + ref_id, value)
 
 
 class QuovaImporter(object):
@@ -135,10 +135,9 @@ class QuovaImporter(object):
             "Building temporary reference database from %r",
             reference_file)
 
-        ref_fp = open_file(reference_file)
         ref_db = self.tmp_db
-        for ref_type, ref_id, value in _parse_reference_set(ref_fp):
-            ref_db.put(ref_type + ref_id, value)
+        ref_fp = open_file(reference_file)
+        _build_reference_db(ref_db, ref_fp)
 
         logger.info("Reading data file %r", data_file)
 
