@@ -96,9 +96,10 @@ def _build_reference_db(db, fp):
 class QuovaImporter(object):
     """Importer for Quova data sets."""
 
-    def __init__(self, dir, tmp_db):
+    def __init__(self, dir, tmp_db, ref_lookups):
         self.dir = dir
         self.tmp_db = tmp_db
+        self.ref_lookups = ref_lookups
 
     def iter_records(self):
 
@@ -138,7 +139,8 @@ class QuovaImporter(object):
 
         ref_db = self.tmp_db
         ref_fp = open_file(reference_file)
-        _build_reference_db(ref_db, ref_fp)
+        if self.ref_lookups:
+            _build_reference_db(ref_db, ref_fp)
 
         logger.info("Reading data file %r", data_file)
 
