@@ -22,8 +22,8 @@ def json_pp(s):
     return json.dumps(json.loads(s), indent=2, sort_keys=True)
 
 
-def lookup_and_print(db, ip):
-    value = db.lookup(inet_aton(ip))
+def lookup_and_print(db, ip, dt):
+    value = db.lookup(inet_aton(ip), dt)
     if value is None:
         print("No hit found")
     else:
@@ -71,24 +71,27 @@ def load_data(database_dir, data_dirs):
 
 @app.cmd(name="lookup")
 @app.cmd_arg('ips', help="The IP address(es) to lookup", nargs='+')
-def lookup(ips, database_dir):
+@app.cmd_arg('--datetime', '--dt', dest='dt')
+def lookup(ips, database_dir, dt):
     db = Database(database_dir)
     for ip in ips:
-        lookup_and_print(db, ip)
+        lookup_and_print(db, ip, dt)
 
 
 @app.cmd(name="shell")
-def shell(database_dir):
+@app.cmd_arg('--datetime', '--dt', dest='dt')
+def shell(database_dir, dt):
     db = Database(database_dir)
     while True:
         ip = raw_input('IP: ')
-        lookup_and_print(db, ip)
+        lookup_and_print(db, ip, dt)
 
 
 @app.cmd(name='perftest', help="Run performance test")
-@app.cmd_arg('--iterations', default=100 * 1000, type=int,
+@app.cmd_arg('--iterations', '-n', default=100 * 1000, type=int,
              help="The number of iterations")
-def perftest(iterations, database_dir):
+@app.cmd_arg('--datetime', '--dt', dest='dt')
+def perftest(database_dir, iterations, dt):
     logger.info("Running %d iterations", iterations)
     db = Database(database_dir)
     size = 4
@@ -99,7 +102,7 @@ def perftest(iterations, database_dir):
     lookup = db.lookup
     start_time = time.time()
     for n in xrange(iterations):
-        lookup(rand_bytes[n:n + size])
+        lookup(rand_bytes[n:n + size], dt)
 
     elapsed = time.time() - start_time
     out = "{:d} lookups in {:.2f}s ({:.2f} req/s)".format(

@@ -33,11 +33,17 @@ import struct
 import plyvel
 import simplejson as json
 
-from whip.util import dict_diff, ipv4_int_to_bytes
+from whip.util import dict_diff, dict_patch, ipv4_int_to_bytes
 
 SIZE_STRUCT = struct.Struct('>H')
 
 logger = logging.getLogger(__name__)
+
+json_encoder = json.JSONEncoder(
+    ensure_ascii=True,
+    check_circular=False,
+    separators=(',', ':'),  # no whitespace
+)
 
 
 class Database(object):
@@ -65,19 +71,15 @@ class Database(object):
         """Load data from an importer iterable"""
 
         extract_datetime = operator.itemgetter('datetime')
-        json_encoder = json.JSONEncoder(
-            ensure_ascii=True,
-            check_circular=False,
-            separators=(',', ':'),  # no whitespace
-        )
+        _encode = json_encoder.encode
 
         for n, item in enumerate(it, 1):
             begin_ip_int, end_ip_int, infosets = item
 
             infosets.sort(key=extract_datetime, reverse=True)
             latest = infosets[0]
-            latest_json = json_encoder.encode(latest)
-            history_json = json_encoder.encode([
+            latest_json = _encode(latest)
+            history_json = _encode([
                 dict_diff(d, latest)
                 for d in infosets[1:]
             ])
@@ -97,7 +99,9 @@ class Database(object):
         # Refresh iterator so that it sees the new data
         self._make_iter()
 
-    def lookup(self, ip, _unpack=SIZE_STRUCT.unpack):
+    def lookup(self, ip, dt=None, _unpack=SIZE_STRUCT.unpack,
+               _decode=json.JSONDecoder().decode,
+               _encode=json_encoder.encode):
         """Lookup a single IP address in the database
 
         This either returns the stored information, or `None` if no
@@ -124,7 +128,20 @@ class Database(object):
         size = _unpack(value[4:6])[0]
         latest_json = value[6:size + 6]
 
-        # TODO: implement historical lookups
-        # history_json = value[size + 6:]
+        if dt is None:
+            # Most recent version requested, so we're done
+            return latest_json
 
-        return latest_json
+        # FIXME: return latest version instead of first historical
+        # version for recent dates
+
+        # Historical lookups
+        history = _decode(value[size + 6:])
+        for item in history:
+            if item[0]['datetime'] <= dt:
+                info = _decode(latest_json)
+                dict_patch(info, *item)
+                return _encode(info)
+
+        # Too bad, no result
+        return None
