@@ -145,9 +145,9 @@ class Database(object):
 
         # Too bad, we need to delve deeper into history.
         history = _decode(value[size + 6:])
-        for item in history:
-            if item[0]['datetime'] <= dt:
-                dict_patch(latest, *item)
+        for to_delete, to_set in history:
+            if to_delete['datetime'] <= dt:
+                dict_patch(latest, to_delete, to_set)
                 return _encode(latest)
 
         # Too bad, no result
