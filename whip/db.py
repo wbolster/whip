@@ -80,14 +80,21 @@ class Database(object):
         for n, item in enumerate(merged, 1):
             begin_ip_int, end_ip_int, infosets = item
 
-            # Build history structure
+            # Build history structure. The latest version is stored in
+            # full, ...
             infosets.sort(key=extract_datetime, reverse=True)
             latest = infosets[0]
             latest_json = _encode(latest)
+
+            # ... and the rest is a series of (reverse) diffs.
             history_json = _encode([
-                dict_diff(d, latest)
-                for d in infosets[1:]
+                dict_diff(infosets[i], infosets[i + 1])
+                for i in xrange(len(infosets) - 1)
             ])
+
+            # FIXME: There are probably off-by-one issues with
+            # date-based retrieval later on. This needs more
+            # thinking/testing.
 
             # Store data
             key = ipv4_int_to_bytes(end_ip_int)
