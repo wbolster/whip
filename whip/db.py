@@ -5,7 +5,7 @@ import operator
 import plyvel
 import simplejson as json
 
-from whip.util import ipv4_int_to_bytes
+from whip.util import dict_diff, ipv4_int_to_bytes
 
 
 logger = logging.getLogger(__name__)
@@ -43,11 +43,20 @@ class Database(object):
 
         )
         for n, item in enumerate(it, 1):
-            begin_ip_int, end_ip_int, data = item
+            begin_ip_int, end_ip_int, infosets = item
 
             # The data is a list of dicts with a timestamp. Sort
-            # chronologically, putting the most recent information first.
-            data.sort(key=extract_datetime, reverse=True)
+            # chronologically, putting the most recent information
+            # first, and saving only the changed fields for previous
+            # versions.
+            infosets.sort(key=extract_datetime, reverse=True)
+            latest_version = infosets[0]
+
+            previous_versions = [
+                dict_diff(d, latest_version)
+                for d in infosets[1:]
+            ]
+            data = (latest_version, previous_versions)
             encoded = json_encoder.encode(data)
 
             # Store in database. The end IP is stored in the key, the
