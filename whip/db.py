@@ -1,12 +1,41 @@
+"""
+Whip database storage module.
+
+All IP ranges with associated information are stored in a LevelDB
+database. The key/value layout is as follows:
+
+* The end IP is used as the key. This allows for quick
+  fast range lookups.
+
+* The begin IP and the actual information is stored in the value. The
+  most recent infoset for a range is stored in full, encoded as JSON, so
+  that it can be returned quickly without any decoding and processing
+  overhead.
+
+  To save a lot of space (and hence improve performance), historical
+  data for an IP range is stored as diffs from the most recent version.
+  When querying for older versions, the original data is reconstructed
+  on-demand.
+
+  The value is packed as follows:
+
+  * IPv4 begin address (4 bytes)
+  * Length of the JSON data for the most recent information (2 bytes)
+  * JSON encoded data for the latest version (variable length)
+  * JSON encoded diffs for older versions (variable length)
+
+"""
 
 import logging
 import operator
+import struct
 
 import plyvel
 import simplejson as json
 
 from whip.util import dict_diff, ipv4_int_to_bytes
 
+SIZE_STRUCT = struct.Struct('>H')
 
 logger = logging.getLogger(__name__)
 
@@ -34,38 +63,33 @@ class Database(object):
 
     def load(self, it):
         """Load data from an importer iterable"""
-        extract_datetime = operator.itemgetter('datetime')
 
+        extract_datetime = operator.itemgetter('datetime')
         json_encoder = json.JSONEncoder(
             ensure_ascii=True,
             check_circular=False,
             separators=(',', ':'),  # no whitespace
-
         )
+
         for n, item in enumerate(it, 1):
             begin_ip_int, end_ip_int, infosets = item
 
-            # The data is a list of dicts with a timestamp. Sort
-            # chronologically, putting the most recent information
-            # first, and saving only the changed fields for previous
-            # versions.
             infosets.sort(key=extract_datetime, reverse=True)
-            latest_version = infosets[0]
-
-            previous_versions = [
-                dict_diff(d, latest_version)
+            latest = infosets[0]
+            latest_json = json_encoder.encode(latest)
+            history_json = json_encoder.encode([
+                dict_diff(d, latest)
                 for d in infosets[1:]
-            ]
-            data = (latest_version, previous_versions)
-            encoded = json_encoder.encode(data)
+            ])
 
-            # Store in database. The end IP is stored in the key, the
-            # begin IP and the actual information is stored in the
-            # value.
-            value = ipv4_int_to_bytes(begin_ip_int) + encoded
-            self.db.put(
-                ipv4_int_to_bytes(end_ip_int),
-                value)
+            key = ipv4_int_to_bytes(end_ip_int)
+            value = (ipv4_int_to_bytes(begin_ip_int)
+                     + SIZE_STRUCT.pack(len(latest_json))
+                     + latest_json
+                     + history_json)
+
+            # Store in database
+            self.db.put(key, value)
 
             if n % 100000 == 0:
                 logger.info('%d records stored', n)
@@ -73,7 +97,7 @@ class Database(object):
         # Refresh iterator so that it sees the new data
         self._make_iter()
 
-    def lookup(self, ip):
+    def lookup(self, ip, _unpack=SIZE_STRUCT.unpack):
         """Lookup a single IP address in the database
 
         This either returns the stored information, or `None` if no
@@ -95,5 +119,12 @@ class Database(object):
         if ip < value[:4]:
             return None
 
-        # The remainder of the value is the actual data to return
-        return value[4:]
+        # The next 2 bytes indicate the length of the JSON string for
+        # the most recent information
+        size = _unpack(value[4:6])[0]
+        latest_json = value[6:size + 6]
+
+        # TODO: implement historical lookups
+        # history_json = value[size + 6:]
+
+        return latest_json
