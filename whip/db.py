@@ -33,7 +33,7 @@ import struct
 import plyvel
 import simplejson as json
 
-from whip.util import dict_diff, dict_patch, ipv4_int_to_bytes
+from whip.util import dict_diff, dict_patch, ipv4_int_to_bytes, merge_ranges
 
 SIZE_STRUCT = struct.Struct('>H')
 
@@ -67,15 +67,20 @@ class Database(object):
         """
         self.iter = self.db.iterator(include_key=False)
 
-    def load(self, it):
-        """Load data from an importer iterable"""
+    def load(self, *iters):
+        """Load data from importer iterables"""
 
         extract_datetime = operator.itemgetter('datetime')
         _encode = json_encoder.encode
 
-        for n, item in enumerate(it, 1):
+        # Merge all iterables to produce unique, non-overlapping IP
+        # ranges with multiple timestamped infosets.
+        merged = merge_ranges(*iters)
+
+        for n, item in enumerate(merged, 1):
             begin_ip_int, end_ip_int, infosets = item
 
+            # Build history structure
             infosets.sort(key=extract_datetime, reverse=True)
             latest = infosets[0]
             latest_json = _encode(latest)
@@ -84,6 +89,7 @@ class Database(object):
                 for d in infosets[1:]
             ])
 
+            # Store data
             key = ipv4_int_to_bytes(end_ip_int)
             value = (ipv4_int_to_bytes(begin_ip_int)
                      + SIZE_STRUCT.pack(len(latest_json))

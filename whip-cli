@@ -54,7 +54,6 @@ def load_data(database_dir, data_dirs, ref_lookups):
 
     try:
         from whip.importers.quova import QuovaImporter
-        from whip.util import merge_ranges
 
         prefix_generator = (chr(i) for i in xrange(256))
         iters = []
@@ -67,9 +66,8 @@ def load_data(database_dir, data_dirs, ref_lookups):
 
             iters.append(importer.iter_records())
 
-        merged = merge_ranges(*iters)
         db = Database(database_dir, create_if_missing=True)
-        db.load(merged)
+        db.load(*iters)
 
     finally:
         tmp_db.close()
