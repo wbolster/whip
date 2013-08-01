@@ -128,20 +128,27 @@ class Database(object):
         size = _unpack(value[4:6])[0]
         latest_json = value[6:size + 6]
 
+        # If the lookup is for the recent version requested, we're done
         if dt is None:
-            # Most recent version requested, so we're done
             return latest_json
 
-        # FIXME: return latest version instead of first historical
-        # version for recent dates
+        # TODO: store latest date somewhere to avoid JSON parsing
+        # overhead.
 
-        # Historical lookups
+        # This is a historical lookup. This means we actually need to
+        # peek into the record.
+        latest = _decode(latest_json)
+
+        # The most recent version may be the one asked for.
+        if latest['datetime'] <= dt:
+            return latest_json
+
+        # Too bad, we need to delve deeper into history.
         history = _decode(value[size + 6:])
         for item in history:
             if item[0]['datetime'] <= dt:
-                info = _decode(latest_json)
-                dict_patch(info, *item)
-                return _encode(info)
+                dict_patch(latest, *item)
+                return _encode(latest)
 
         # Too bad, no result
         return None
