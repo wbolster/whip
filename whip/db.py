@@ -92,10 +92,6 @@ class Database(object):
                 for i in xrange(len(infosets) - 1)
             ])
 
-            # FIXME: There are probably off-by-one issues with
-            # date-based retrieval later on. This needs more
-            # thinking/testing.
-
             # Store data
             key = ipv4_int_to_bytes(end_ip_int)
             value = (ipv4_int_to_bytes(begin_ip_int)
@@ -139,29 +135,30 @@ class Database(object):
         # The next 2 bytes indicate the length of the JSON string for
         # the most recent information
         size = _unpack(value[4:6])[0]
-        latest_json = value[6:size + 6]
+        infoset_json = value[6:size + 6]
 
         # If the lookup is for the recent version requested, we're done
         if dt is None:
-            return latest_json
-
-        # TODO: store latest date somewhere to avoid JSON parsing
-        # overhead.
+            return infoset_json
 
         # This is a historical lookup. This means we actually need to
         # peek into the record.
-        latest = _decode(latest_json)
+        infoset = _decode(infoset_json)
 
         # The most recent version may be the one asked for.
-        if latest['datetime'] <= dt:
-            return latest_json
+        if infoset['datetime'] <= dt:
+            # TODO: store latest date somewhere more easily accessible
+            # (timestamp field after the JSON length field perhaps?) to
+            # avoid JSON parsing overhead for this case.
+            return infoset_json
 
-        # Too bad, we need to delve deeper into history.
+        # Too bad, we need to delve deeper into history by iteratively
+        # applying patches.
         history = _decode(value[size + 6:])
         for to_delete, to_set in history:
-            if to_delete['datetime'] <= dt:
-                dict_patch(latest, to_delete, to_set)
-                return _encode(latest)
+            dict_patch(infoset, to_delete, to_set)
+            if infoset['datetime'] <= dt:
+                return _encode(infoset)
 
         # Too bad, no result
         return None
