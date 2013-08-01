@@ -35,13 +35,13 @@ app.arg('--database-dir', default='db')
 
 
 @app.cmd(name='load', help="Load data")
-@app.cmd_arg('--data-dirs', nargs='+', required=True)
+@app.cmd_arg('--data-files', nargs='+', required=True)
 @app.cmd_arg('--no-ref-lookups', dest='ref_lookups', action='store_false')
-def load_data(database_dir, data_dirs, ref_lookups):
+def load_data(database_dir, data_files, ref_lookups):
 
     logger.info(
         "Importing %d data directories: %r",
-        len(data_dirs), data_dirs)
+        len(data_files), data_files)
 
     if not ref_lookups:
         logger.warning(
@@ -57,10 +57,10 @@ def load_data(database_dir, data_dirs, ref_lookups):
 
         prefix_generator = (chr(i) for i in xrange(256))
         iters = []
-        for data_dir in data_dirs:
+        for data_file in data_files:
             prefix = next(prefix_generator)
             importer = QuovaImporter(
-                dir=data_dir,
+                data_file=data_file,
                 tmp_db=tmp_db.prefixed_db(prefix),
                 ref_lookups=ref_lookups)
 

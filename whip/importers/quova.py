@@ -96,28 +96,21 @@ def _build_reference_db(db, fp):
 class QuovaImporter(object):
     """Importer for Quova data sets."""
 
-    def __init__(self, dir, tmp_db, ref_lookups):
-        self.dir = dir
+    def __init__(self, data_file, tmp_db, ref_lookups):
+        self.data_file = data_file
         self.tmp_db = tmp_db
         self.ref_lookups = ref_lookups
 
     def iter_records(self):
-
-        files = os.listdir(self.dir)
-        data_files = [d for d in files if DATA_FILE_RE.match(d) is not None]
-        if not data_files:
-            raise RuntimeError(
-                "No data file (.dat.gz) found in in directory %r"
-                % self.dir)
-        elif len(data_files) != 1:
-            raise RuntimeError(
-                "Multiple data files (.dat.gz) found in in directory %r"
-                % self.dir)
-
-        data_file = os.path.join(self.dir, data_files[0])
-        logger.info("Found data file %r", data_file)
+        data_file = self.data_file
+        logger.info("Using data file %r", data_file)
 
         match = DATA_FILE_RE.match(os.path.basename(data_file))
+        if not match:
+            raise RuntimeError(
+                "Unrecognized data file name: %r (is it the correct file?)"
+                % data_file)
+
         match_dict = match.groupdict()
         version = int(match_dict['version'])
         dt = datetime.datetime(int(match_dict['year']),
