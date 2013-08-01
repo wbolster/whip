@@ -108,11 +108,11 @@ class QuovaImporter(object):
         if not data_files:
             raise RuntimeError(
                 "No data file (.dat.gz) found in in directory %r"
-                % dir)
+                % self.dir)
         elif len(data_files) != 1:
             raise RuntimeError(
                 "Multiple data files (.dat.gz) found in in directory %r"
-                % dir)
+                % self.dir)
 
         data_file = os.path.join(self.dir, data_files[0])
         logger.info("Found data file %r", data_file)
