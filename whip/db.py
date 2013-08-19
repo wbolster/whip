@@ -87,22 +87,22 @@ class Database(object):
             latest = infosets[0]
             latest_json = _encode(latest)
 
-            # ... and the rest is a series of (reverse) diffs.
+            # ... while older versions are stored as (reverse) diffs to
+            # the version coming after it.
             history_json = _encode([
                 dict_diff(infosets[i], infosets[i + 1])
                 for i in xrange(len(infosets) - 1)
             ])
 
-            # Store data
+            # Build and store the actual data
             key = ipv4_int_to_bytes(end_ip_int)
             value = (ipv4_int_to_bytes(begin_ip_int)
                      + SIZE_STRUCT.pack(len(latest_json))
                      + latest_json
                      + history_json)
-
-            # Store in database
             self.db.put(key, value)
 
+            # Progress logging
             if n % 100000 == 0:
                 logger.info('%d records stored', n)
 
