@@ -44,6 +44,8 @@ json_encoder = json.JSONEncoder(
     separators=(',', ':'),  # no whitespace
 )
 
+json_decoder = json.JSONDecoder()
+
 
 class Database(object):
     def __init__(self, database_dir, create_if_missing=False):
@@ -108,7 +110,7 @@ class Database(object):
         self._make_iter()
 
     def lookup(self, ip, dt=None, _unpack=SIZE_STRUCT.unpack,
-               _decode=json.JSONDecoder().decode,
+               _decode=json_decoder.decode,
                _encode=json_encoder.encode):
         """Lookup a single IP address in the database
 
