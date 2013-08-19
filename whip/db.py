@@ -137,7 +137,7 @@ class Database(object):
         size = _unpack(value[4:6])[0]
         infoset_json = value[6:size + 6]
 
-        # If the lookup is for the recent version requested, we're done
+        # If the lookup is for the most recent version, we're done
         if dt is None:
             return infoset_json
 
