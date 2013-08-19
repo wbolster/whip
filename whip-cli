@@ -31,7 +31,7 @@ def lookup_and_print(db, ip, dt):
 
 
 app = aaargh.App(description="Fast IP geo lookup")
-app.arg('--database-dir', default='db')
+app.arg('--database-dir', '--db', default='db')
 
 
 @app.cmd(name='load', help="Load data")
