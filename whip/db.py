@@ -26,7 +26,6 @@ database. The key/value layout is as follows:
 
 """
 
-import itertools
 import logging
 import operator
 import struct
@@ -49,12 +48,10 @@ json_decoder = json.JSONDecoder()
 
 
 def _build_db_record(
-        item,
+        begin_ip_int, end_ip_int, infosets,
         _extract_datetime=operator.itemgetter('datetime'),
         _encode=json_encoder.encode):
     """Create database records for an iterable of merged infosets."""
-
-    begin_ip_int, end_ip_int, infosets = item
 
     # Build history structure. The latest version is stored in
     # full, ...
@@ -107,7 +104,8 @@ class Database(object):
         merged = merge_ranges(*iters)
 
         n = 0
-        for key, value in itertools.imap(_build_db_record, merged):
+        for item in merged:
+            key, value = _build_db_record(*item)
             self.db.put(key, value)
             n += 1
 
