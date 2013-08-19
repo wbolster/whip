@@ -26,6 +26,7 @@ database. The key/value layout is as follows:
 
 """
 
+import itertools
 import logging
 import operator
 import struct
@@ -45,6 +46,36 @@ json_encoder = json.JSONEncoder(
 )
 
 json_decoder = json.JSONDecoder()
+
+
+def _build_db_record(
+        item,
+        _extract_datetime=operator.itemgetter('datetime'),
+        _encode=json_encoder.encode):
+    """Create database records for an iterable of merged infosets."""
+
+    begin_ip_int, end_ip_int, infosets = item
+
+    # Build history structure. The latest version is stored in
+    # full, ...
+    infosets.sort(key=_extract_datetime, reverse=True)
+    latest = infosets[0]
+    latest_json = _encode(latest)
+
+    # ... while older versions are stored as (reverse) diffs to
+    # the version coming after it.
+    history_json = _encode([
+        dict_diff(infosets[i], infosets[i + 1])
+        for i in xrange(len(infosets) - 1)
+    ])
+
+    # Build the actual key and value byte strings
+    key = ipv4_int_to_bytes(end_ip_int)
+    value = (ipv4_int_to_bytes(begin_ip_int)
+             + SIZE_STRUCT.pack(len(latest_json))
+             + latest_json
+             + history_json)
+    return key, value
 
 
 class Database(object):
@@ -71,36 +102,14 @@ class Database(object):
     def load(self, *iters):
         """Load data from importer iterables"""
 
-        extract_datetime = operator.itemgetter('datetime')
-        _encode = json_encoder.encode
-
         # Merge all iterables to produce unique, non-overlapping IP
         # ranges with multiple timestamped infosets.
         merged = merge_ranges(*iters)
 
-        for n, item in enumerate(merged, 1):
-            begin_ip_int, end_ip_int, infosets = item
-
-            # Build history structure. The latest version is stored in
-            # full, ...
-            infosets.sort(key=extract_datetime, reverse=True)
-            latest = infosets[0]
-            latest_json = _encode(latest)
-
-            # ... while older versions are stored as (reverse) diffs to
-            # the version coming after it.
-            history_json = _encode([
-                dict_diff(infosets[i], infosets[i + 1])
-                for i in xrange(len(infosets) - 1)
-            ])
-
-            # Build and store the actual data
-            key = ipv4_int_to_bytes(end_ip_int)
-            value = (ipv4_int_to_bytes(begin_ip_int)
-                     + SIZE_STRUCT.pack(len(latest_json))
-                     + latest_json
-                     + history_json)
+        n = 0
+        for key, value in itertools.imap(_build_db_record, merged):
             self.db.put(key, value)
+            n += 1
 
             # Progress logging
             if n % 100000 == 0:
