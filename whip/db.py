@@ -40,7 +40,6 @@ SIZE_STRUCT = struct.Struct('>H')
 logger = logging.getLogger(__name__)
 
 json_encoder = json.JSONEncoder(
-    ensure_ascii=True,
     check_circular=False,
     separators=(',', ':'),  # no whitespace
 )
