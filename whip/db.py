@@ -141,8 +141,8 @@ class Database(object):
         if dt is None:
             return infoset_json
 
-        # This is a historical lookup. This means we actually need to
-        # peek into the record.
+        # This is a lookup for a specific timestamp. This means we
+        # actually need to peek into the record.
         infoset = _decode(infoset_json)
 
         # The most recent version may be the one asked for.
