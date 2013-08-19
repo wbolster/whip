@@ -56,15 +56,14 @@ def load_data(database_dir, data_files, ref_lookups):
         from whip.importers.quova import QuovaImporter
 
         prefix_generator = (chr(i) for i in xrange(256))
-        iters = []
-        for data_file in data_files:
-            prefix = next(prefix_generator)
-            importer = QuovaImporter(
+        importers = [
+            QuovaImporter(
                 data_file=data_file,
-                tmp_db=tmp_db.prefixed_db(prefix),
+                tmp_db=tmp_db.prefixed_db(next(prefix_generator)),
                 ref_lookups=ref_lookups)
-
-            iters.append(importer.iter_records())
+            for data_file in data_files
+        ]
+        iters = [importer.iter_records() for importer in importers]
 
         db = Database(database_dir, create_if_missing=True)
         db.load(*iters)
