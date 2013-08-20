@@ -12,7 +12,7 @@ import aaargh
 import plyvel
 import simplejson as json
 
-from whip import Database
+from whip.db import Database
 
 
 logger = logging.getLogger(__name__)
