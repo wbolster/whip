@@ -13,14 +13,11 @@ import os
 import re
 import time
 
-from whip.util import ipv4_int_to_str, open_file
+from whip.util import ipv4_int_to_str, open_file, ProgressReporter
 
 logger = logging.getLogger(__name__)
 
 ISO8601_DATETIME_FMT = '%Y-%m-%dT%H:%M:%S'
-
-# Number of seconds between progress log messages
-PROGRESS_REPORT_INTERVAL = 10
 
 # Regular expression to match file names like
 # "EDITION_Gold_YYYY-MM-DD_vXXX.dat.gz"
@@ -143,7 +140,10 @@ class QuovaImporter(object):
         it = (map(_clean, item) for item in reader)
         it = itertools.starmap(QuovaRecord, it)
 
-        tick = time.time()
+        reporter = ProgressReporter(lambda: logger.info(
+            "Read %d records from %r; current position: %s",
+            n, data_file, begin_ip))
+
         for n, record in enumerate(it, 1):
 
             begin_ip_int = int(record.start_ip_int)
@@ -198,10 +198,7 @@ class QuovaImporter(object):
 
             yield begin_ip_int, end_ip_int, out
 
-            if time.time() - tick > PROGRESS_REPORT_INTERVAL:
-                tick = time.time()
-                logger.info(
-                    "Read %d records from %r; current position: %s",
-                    n, data_file, begin_ip)
+            reporter.tick()
 
+        reporter.tick(True)
         logger.info("Finished reading %r (%d records)", data_file, n)
