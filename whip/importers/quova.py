@@ -133,9 +133,9 @@ class QuovaImporter(object):
             reference_file)
 
         ref_db = self.tmp_db
-        ref_fp = open_file(reference_file)
         if self.ref_lookups:
-            _build_reference_db(ref_db, ref_fp)
+            with open_file(reference_file) as ref_fp:
+                _build_reference_db(ref_db, ref_fp)
 
         logger.info("Reading data file %r", data_file)
 
