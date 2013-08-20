@@ -33,7 +33,14 @@ import struct
 import plyvel
 import simplejson as json
 
-from whip.util import dict_diff, dict_patch, ipv4_int_to_bytes, merge_ranges
+from whip.util import (
+    dict_diff,
+    dict_patch,
+    ipv4_int_to_bytes,
+    ipv4_int_to_str,
+    merge_ranges,
+    ProgressReporter,
+)
 
 SIZE_STRUCT = struct.Struct('>H')
 
@@ -103,15 +110,17 @@ class Database(object):
         # ranges with multiple timestamped infosets.
         merged = merge_ranges(*iters)
 
+        reporter = ProgressReporter(lambda: logger.info(
+            "%d database records stored; current position: %s",
+            n, ipv4_int_to_str(item[0])))
+
         n = 0
-        for item in merged:
+        for n, item in enumerate(merged, 1):
             key, value = _build_db_record(*item)
             self.db.put(key, value)
-            n += 1
+            reporter.tick()
 
-            # Progress logging
-            if n % 100000 == 0:
-                logger.info('%d records stored', n)
+        reporter.tick(True)
 
         # Refresh iterator so that it sees the new data
         self._make_iter()
