@@ -18,8 +18,8 @@ from whip.util import buffer_iter
 
 logger = logging.getLogger(__name__)
 
-BUFFERED_RECORDS_PER_IMPORTER = 10000
-MAX_BUFFERED_RECORDS = 1000 * 1000
+BUFFERED_RECORDS_PER_IMPORTER = 10 * 1000
+MAX_BUFFERED_RECORDS = 200 * 1000
 
 
 def json_pp(s):
