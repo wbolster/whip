@@ -66,10 +66,10 @@ def _build_db_record(
     latest = infosets[0]
     latest_json = _encode(latest)
 
-    # ... while older versions are stored as (reverse) diffs to
-    # the version coming after it.
+    # ... while older versions are stored as (reverse) diffs to the
+    # previous (in time) version.
     history_json = _encode([
-        dict_diff(infosets[i], infosets[i + 1])
+        dict_diff(infosets[i + 1], infosets[i])
         for i in xrange(len(infosets) - 1)
     ])
 
