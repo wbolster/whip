@@ -5,6 +5,8 @@ import operator
 import socket
 import struct
 import subprocess
+import time
+
 
 __all__ = [
     'ipv4_int_to_str',
@@ -13,13 +15,15 @@ __all__ = [
     'ipv4_bytes_to_int',
     'merge_ranges',
     'open_file',
+    'ProgressReporter',
 ]
-
 
 EVENT_TYPE_BEGIN = 0
 EVENT_TYPE_END = 1
 
 IPV4_STRUCT = struct.Struct('>L')
+
+PROGRESS_REPORT_INTERVAL = 10
 
 
 def ipv4_int_to_str(n, _inet_ntoa=socket.inet_ntoa, _pack=IPV4_STRUCT.pack):
@@ -175,3 +179,16 @@ def buffer_iter(iterable, size):
             break
         for item in buf:
             yield item
+
+
+class ProgressReporter(object):
+    def __init__(self, cb, interval=PROGRESS_REPORT_INTERVAL):
+        assert callable(cb)
+        self._cb = cb
+        self._interval = interval
+        self._last_report = float('-inf')
+
+    def tick(self, force_report=False):
+        if force_report or time.time() - self._last_report > self._interval:
+            self._cb()
+            self._last_report = time.time()
