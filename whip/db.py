@@ -155,7 +155,7 @@ class Database(object):
 
         # This is a lookup for a specific timestamp. This means we
         # actually need to peek into the record.
-        infoset = json_decoder.decode(infoset_json)
+        (infoset, _) = json_decoder.raw_decode(infoset_json)
 
         # The most recent version may be the one asked for.
         if infoset['datetime'] <= dt:
@@ -166,7 +166,7 @@ class Database(object):
 
         # Too bad, we need to delve deeper into history by iteratively
         # applying patches.
-        history = json_decoder.decode(value[size + 6:])
+        (history, _) = json_decoder.raw_decode(value[size + 6:])
         for to_delete, to_set in history:
             dict_patch(infoset, to_delete, to_set)
             if infoset['datetime'] <= dt:
