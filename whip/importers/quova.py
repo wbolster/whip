@@ -11,7 +11,6 @@ import logging
 import math
 import os
 import re
-import time
 
 from whip.util import ipv4_int_to_str, open_file, ProgressReporter
 
