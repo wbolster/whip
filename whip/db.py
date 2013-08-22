@@ -170,6 +170,7 @@ class Database(object):
         for to_delete, to_set in history:
             dict_patch(infoset, to_delete, to_set)
             if infoset['datetime'] <= dt:
+                # Finally found it; encode and return the result
                 return json_encoder.encode(infoset)
 
         # Too bad, no result
