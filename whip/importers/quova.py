@@ -141,23 +141,20 @@ class QuovaImporter(object):
 
         reporter = ProgressReporter(lambda: logger.info(
             "Read %d records from %r; current position: %s",
-            n, data_file, begin_ip))
+            n, data_file, ipv4_int_to_str(begin_ip_int)))
 
         for n, record in enumerate(it, 1):
 
             begin_ip_int = int(record.start_ip_int)
             end_ip_int = int(record.end_ip_int)
 
-            begin_ip = ipv4_int_to_str(begin_ip_int)
-            end_ip = ipv4_int_to_str(end_ip_int)
-
             out = {
                 # Data file information
                 'datetime': dt_as_str,
 
                 # Network information
-                'begin': begin_ip,
-                'end': end_ip,
+                'begin': ipv4_int_to_str(begin_ip_int),
+                'end': ipv4_int_to_str(end_ip_int),
                 'cidr': int(record.cidr),
                 'connection_type': record.connectiontype,
                 'line_speed': record.linespeed,
