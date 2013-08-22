@@ -54,21 +54,18 @@ json_encoder = json.JSONEncoder(
 json_decoder = json.JSONDecoder()
 
 
-def _build_db_record(
-        begin_ip_int, end_ip_int, infosets,
-        _extract_datetime=operator.itemgetter('datetime'),
-        _encode=json_encoder.encode):
+def _build_db_record(begin_ip_int, end_ip_int, infosets):
     """Create database records for an iterable of merged infosets."""
 
     # Build history structure. The latest version is stored in
     # full, ...
-    infosets.sort(key=_extract_datetime, reverse=True)
+    infosets.sort(key=operator.itemgetter('datetime'), reverse=True)
     latest = infosets[0]
-    latest_json = _encode(latest)
+    latest_json = json_encoder.encode(latest)
 
     # ... while older versions are stored as (reverse) diffs to the
     # previous (in time) version.
-    history_json = _encode([
+    history_json = json_encoder.encode([
         dict_diff(infosets[i + 1], infosets[i])
         for i in xrange(len(infosets) - 1)
     ])
@@ -125,9 +122,7 @@ class Database(object):
         # Refresh iterator so that it sees the new data
         self._make_iter()
 
-    def lookup(self, ip, dt=None, _unpack=SIZE_STRUCT.unpack,
-               _decode=json_decoder.decode,
-               _encode=json_encoder.encode):
+    def lookup(self, ip, dt=None):
         """Lookup a single IP address in the database
 
         This either returns the stored information, or `None` if no
@@ -151,7 +146,7 @@ class Database(object):
 
         # The next 2 bytes indicate the length of the JSON string for
         # the most recent information
-        size = _unpack(value[4:6])[0]
+        size = SIZE_STRUCT.unpack(value[4:6])[0]
         infoset_json = value[6:size + 6]
 
         # If the lookup is for the most recent version, we're done
@@ -160,7 +155,7 @@ class Database(object):
 
         # This is a lookup for a specific timestamp. This means we
         # actually need to peek into the record.
-        infoset = _decode(infoset_json)
+        infoset = json_decoder.decode(infoset_json)
 
         # The most recent version may be the one asked for.
         if infoset['datetime'] <= dt:
@@ -171,11 +166,11 @@ class Database(object):
 
         # Too bad, we need to delve deeper into history by iteratively
         # applying patches.
-        history = _decode(value[size + 6:])
+        history = json_decoder.decode(value[size + 6:])
         for to_delete, to_set in history:
             dict_patch(infoset, to_delete, to_set)
             if infoset['datetime'] <= dt:
-                return _encode(infoset)
+                return json_encoder.encode(infoset)
 
         # Too bad, no result
         return None
