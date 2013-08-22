@@ -146,7 +146,7 @@ class Database(object):
 
         # The next 2 bytes indicate the length of the JSON string for
         # the most recent information
-        size = SIZE_STRUCT.unpack(value[4:6])[0]
+        (size,) = SIZE_STRUCT.unpack(value[4:6])
         infoset_json = value[6:size + 6]
 
         # If the lookup is for the most recent version, we're done
