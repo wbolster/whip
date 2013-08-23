@@ -2,4 +2,4 @@ aaargh
 Flask
 nose
 plyvel
-simplejson
+ujson

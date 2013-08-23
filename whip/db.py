@@ -31,7 +31,7 @@ import operator
 import struct
 
 import plyvel
-import simplejson as json
+import ujson
 
 from whip.util import (
     dict_diff,
@@ -46,13 +46,6 @@ SIZE_STRUCT = struct.Struct('>H')
 
 logger = logging.getLogger(__name__)
 
-json_encoder = json.JSONEncoder(
-    check_circular=False,
-    separators=(',', ':'),  # no whitespace
-)
-
-json_decoder = json.JSONDecoder()
-
 
 def _build_db_record(begin_ip_int, end_ip_int, infosets):
     """Create database records for an iterable of merged infosets."""
@@ -61,11 +54,11 @@ def _build_db_record(begin_ip_int, end_ip_int, infosets):
     # full, ...
     infosets.sort(key=operator.itemgetter('datetime'), reverse=True)
     latest = infosets[0]
-    latest_json = json_encoder.encode(latest)
+    latest_json = ujson.dumps(latest)
 
     # ... while older versions are stored as (reverse) diffs to the
     # previous (in time) version.
-    history_json = json_encoder.encode([
+    history_json = ujson.dumps([
         dict_diff(infosets[i + 1], infosets[i])
         for i in xrange(len(infosets) - 1)
     ])
@@ -155,7 +148,7 @@ class Database(object):
 
         # This is a lookup for a specific timestamp. This means we
         # actually need to peek into the record.
-        (infoset, _) = json_decoder.raw_decode(infoset_json)
+        infoset = ujson.loads(infoset_json)
 
         # The most recent version may be the one asked for.
         if infoset['datetime'] <= dt:
@@ -166,12 +159,12 @@ class Database(object):
 
         # Too bad, we need to delve deeper into history by iteratively
         # applying patches.
-        (history, _) = json_decoder.raw_decode(value[size + 6:])
+        history = ujson.loads(value[size + 6:])
         for to_delete, to_set in history:
             dict_patch(infoset, to_delete, to_set)
             if infoset['datetime'] <= dt:
                 # Finally found it; encode and return the result
-                return json_encoder.encode(infoset)
+                return ujson.dumps(infoset)
 
         # Too bad, no result
         return None

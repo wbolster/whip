@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import json
 import logging
 import os
 import shutil
@@ -10,7 +11,7 @@ import time
 
 import aaargh
 import plyvel
-import simplejson as json
+import ujson
 
 from whip.db import Database
 from whip.util import buffer_iter
