@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
-from flask import Flask, abort, make_response, request
-from socket import inet_aton, error as socket_error
+import socket
 
-from .db import Database
+from flask import Flask, abort, make_response, request
+
+from whip.db import Database
 
 app = Flask(__name__)
 app.config.from_envvar('WHIP_SETTINGS', silent=True)
@@ -21,8 +22,8 @@ def _open_db():
 @app.route('/ip/<ip>')
 def lookup(ip):
     try:
-        key = inet_aton(ip)
-    except socket_error:
+        key = socket.inet_aton(ip)
+    except socket.error:
         abort(400)
 
     dt = request.args.get('datetime')
