@@ -23,16 +23,14 @@ BUFFERED_RECORDS_PER_IMPORTER = 10 * 1000
 MAX_BUFFERED_RECORDS = 200 * 1000
 
 
-def json_pp(s):
-    return json.dumps(json.loads(s), indent=2, sort_keys=True)
-
-
 def lookup_and_print(db, ip, dt):
     value = db.lookup(inet_aton(ip), dt)
     if value is None:
         print("No hit found")
     else:
-        print(json_pp(value))
+        # XXX: UltraJSON (ujson) does not support pretty printing, so
+        # use built-in JSON module instead.
+        print(json.dumps(ujson.loads(value), indent=2, sort_keys=True))
 
 
 app = aaargh.App(description="Fast IP geo lookup")
