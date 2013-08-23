@@ -68,7 +68,7 @@ QuovaRecord = collections.namedtuple('QuovaRecord', (
 ))
 
 
-def _clean(v):
+def clean(v):
     """Cleanup an input value"""
     if v in ('', 'unknown'):
         return None
@@ -76,7 +76,7 @@ def _clean(v):
     return v
 
 
-def _build_reference_db(db, fp):
+def build_reference_db(db, fp):
     """Generator to parse a reference set into records"""
     ref_reader = csv.reader(fp, delimiter='|')
 
@@ -131,12 +131,12 @@ class QuovaImporter(object):
         ref_db = self.tmp_db
         if self.ref_lookups:
             with open_file(reference_file) as ref_fp:
-                _build_reference_db(ref_db, ref_fp)
+                build_reference_db(ref_db, ref_fp)
 
         logger.info("Reading data file %r", data_file)
 
         reader = csv.reader(open_file(data_file), delimiter='|')
-        it = (map(_clean, item) for item in reader)
+        it = (map(clean, item) for item in reader)
         it = itertools.starmap(QuovaRecord, it)
 
         reporter = ProgressReporter(lambda: logger.info(
@@ -162,10 +162,10 @@ class QuovaImporter(object):
                 'asn': int(record.asn),
 
                 # Network information (reference database lookups)
-                'sld': _clean(ref_db.get('sld' + record.sld_id)),
-                'tld': _clean(ref_db.get('tld' + record.tld_id)),
-                'reg': _clean(ref_db.get('org' + record.reg_org_id)),
-                'carrier': _clean(ref_db.get('carrier' + record.carrier_id)),
+                'sld': clean(ref_db.get('sld' + record.sld_id)),
+                'tld': clean(ref_db.get('tld' + record.tld_id)),
+                'reg': clean(ref_db.get('org' + record.reg_org_id)),
+                'carrier': clean(ref_db.get('carrier' + record.carrier_id)),
 
                 # Geographic information
                 'continent': record.continent,
