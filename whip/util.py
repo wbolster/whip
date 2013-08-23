@@ -166,7 +166,7 @@ def buffer_iter(iterable, size):
     Iterate over `iterable` while repeatedly pulling chunks into memory.
 
     This is a wrapper for an iterable that repeatedly pulls at most
-    `size` items into memory and then yield the original items
+    `size` items into memory and then yields the original items
     unchanged. This wrapper is intended for lazy generators that perform
     better if multiple items are pulled from it at once instead of one
     item at a time with other code executing in between (e.g. because an
