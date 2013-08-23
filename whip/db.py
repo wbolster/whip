@@ -39,7 +39,7 @@ from whip.util import (
     ipv4_int_to_bytes,
     ipv4_int_to_str,
     merge_ranges,
-    ProgressReporter,
+    PeriodicCallback,
 )
 
 SIZE_STRUCT = struct.Struct('>H')
@@ -100,7 +100,7 @@ class Database(object):
         # ranges with multiple timestamped infosets.
         merged = merge_ranges(*iters)
 
-        reporter = ProgressReporter(lambda: logger.info(
+        reporter = PeriodicCallback(lambda: logger.info(
             "%d database records stored; current position: %s",
             n, ipv4_int_to_str(item[0])))
 

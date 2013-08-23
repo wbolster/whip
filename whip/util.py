@@ -15,7 +15,7 @@ __all__ = [
     'ipv4_bytes_to_int',
     'merge_ranges',
     'open_file',
-    'ProgressReporter',
+    'PeriodicCallback',
 ]
 
 EVENT_TYPE_BEGIN = 0
@@ -23,7 +23,7 @@ EVENT_TYPE_END = 1
 
 IPV4_STRUCT = struct.Struct('>L')
 
-PROGRESS_REPORT_INTERVAL = 10
+DEFAULT_CALLBACK_INTERVAL = 10
 
 
 def ipv4_int_to_str(n, _inet_ntoa=socket.inet_ntoa, _pack=IPV4_STRUCT.pack):
@@ -181,8 +181,8 @@ def buffer_iter(iterable, size):
             yield item
 
 
-class ProgressReporter(object):
-    def __init__(self, cb, interval=PROGRESS_REPORT_INTERVAL):
+class PeriodicCallback(object):
+    def __init__(self, cb, interval=DEFAULT_CALLBACK_INTERVAL):
         assert callable(cb)
         self._cb = cb
         self._interval = interval

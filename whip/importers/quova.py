@@ -12,7 +12,7 @@ import math
 import os
 import re
 
-from whip.util import ipv4_int_to_str, open_file, ProgressReporter
+from whip.util import ipv4_int_to_str, open_file, PeriodicCallback
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +139,7 @@ class QuovaImporter(object):
         it = (map(clean, item) for item in reader)
         it = itertools.starmap(QuovaRecord, it)
 
-        reporter = ProgressReporter(lambda: logger.info(
+        reporter = PeriodicCallback(lambda: logger.info(
             "Read %d records from %r; current position: %s",
             n, data_file, ipv4_int_to_str(begin_ip_int)))
 
