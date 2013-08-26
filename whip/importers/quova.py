@@ -183,13 +183,12 @@ class QuovaImporter(object):
                 'longitude': float(record.longitude),
             }
 
-            # Convert time zone information into ±HH:MM format
             if record.timezone == '999':
                 out['timezone'] = None
             else:
-                tz = float(record.timezone)
-                hours = int(tz)
-                minutes = 60 * (tz - math.floor(tz))
+                # Convert time zone information into ±HH:MM format
+                tz_f, hours = math.modf(float(record.timezone))
+                minutes = abs(60 * tz_f)
                 out['timezone'] = '%+03d:%02d' % (hours, minutes)
 
             yield begin_ip_int, end_ip_int, out
