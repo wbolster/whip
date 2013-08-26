@@ -135,8 +135,11 @@ class QuovaImporter(object):
 
         logger.info("Reading data file %r", data_file)
 
+        # Open CSV data file, clean each field in each input row, and
+        # construct a QuovaRecord.
         reader = csv.reader(open_file(data_file), delimiter='|')
-        it = (map(clean, item) for item in reader)
+        it = iter(reader)
+        it = (map(clean, item) for item in it)
         it = itertools.starmap(QuovaRecord, it)
 
         reporter = PeriodicCallback(lambda: logger.info(
