@@ -39,7 +39,7 @@ app.arg('--database-dir', '--db', default='db')
 
 
 @app.cmd(name='load', help="Load data")
-@app.cmd_arg('--data-files', nargs='+', required=True)
+@app.cmd_arg('data_files', nargs='+')
 @app.cmd_arg('--no-ref-lookups', dest='ref_lookups', action='store_false')
 def load_data(database_dir, data_files, ref_lookups):
 
