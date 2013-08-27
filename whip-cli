@@ -43,9 +43,7 @@ app.arg('--database-dir', '--db', default='db')
 @app.cmd_arg('--no-ref-lookups', dest='ref_lookups', action='store_false')
 def load_data(database_dir, data_files, ref_lookups):
 
-    logger.info(
-        "Importing %d data directories: %r",
-        len(data_files), data_files)
+    logger.info("Importing %d data files: %r", len(data_files), data_files)
 
     if not ref_lookups:
         logger.warning(
