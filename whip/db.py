@@ -22,7 +22,9 @@ database. The key/value layout is as follows:
   * IPv4 begin address (4 bytes)
   * Length of the JSON data for the most recent information (2 bytes)
   * JSON encoded data for the latest version (variable length)
-  * JSON encoded diffs for older versions (variable length)
+  * Length of the latest datetime string (1 byte)
+  * Latest datetime as string
+  * JSON encoded diffs for older versions (variable length, until end)
 
 """
 
@@ -54,6 +56,7 @@ def _build_db_record(begin_ip_int, end_ip_int, infosets):
     # full, ...
     infosets.sort(key=operator.itemgetter('datetime'), reverse=True)
     latest = infosets[0]
+    latest_datetime = latest['datetime']
     latest_json = ujson.dumps(latest)
 
     # ... while older versions are stored as (reverse) diffs to the
@@ -63,11 +66,15 @@ def _build_db_record(begin_ip_int, end_ip_int, infosets):
         for i in xrange(len(infosets) - 1)
     ])
 
-    # Build the actual key and value byte strings
+    # Build the actual key and value byte strings.
+    # XXX: String concatenation seems faster than the''.join((..., ...))
+    # alternative on 64-bit CPython 2.7.5.
     key = ipv4_int_to_bytes(end_ip_int)
     value = (ipv4_int_to_bytes(begin_ip_int)
              + SIZE_STRUCT.pack(len(latest_json))
              + latest_json
+             + chr(len(latest_datetime))
+             + latest_datetime
              + history_json)
     return key, value
 
@@ -139,31 +146,34 @@ class Database(object):
 
         # The next 2 bytes indicate the length of the JSON string for
         # the most recent information
-        (size,) = SIZE_STRUCT.unpack(value[4:6])
-        infoset_json = value[6:size + 6]
+        offset = 4
+        (json_size,) = SIZE_STRUCT.unpack(value[offset:offset + 2])
+        offset += 2
+        infoset_json = value[offset:offset + json_size]
 
-        # If the lookup is for the most recent version, we're done
+        # If the lookup is for the most recent version, we're done.
         if dt is None:
             return infoset_json
 
-        # This is a lookup for a specific timestamp. This means we
-        # actually need to peek into the record.
-        infoset = ujson.loads(infoset_json)
-
-        # The most recent version may be the one asked for.
-        if infoset['datetime'] <= dt:
-            # TODO: store latest date somewhere more easily accessible
-            # (timestamp field after the JSON length field perhaps?) to
-            # avoid JSON parsing overhead for this case.
+        # This is a lookup for a specific timestamp. The most recent
+        # version may be the one asked for.
+        offset += json_size
+        latest_datetime_size = ord(value[offset])
+        offset += 1
+        latest_datetime = value[offset:offset + latest_datetime_size]
+        if latest_datetime <= dt:
             return infoset_json
 
-        # Too bad, we need to delve deeper into history by iteratively
-        # applying patches.
-        history = ujson.loads(value[size + 6:])
+        offset += latest_datetime_size
+
+        # Too bad, we need to delve deeper into history. Decode JSON,
+        # iteratively apply patches, and re-encode to JSON again.
+        infoset = ujson.loads(infoset_json)
+        history = ujson.loads(value[offset:])
         for to_delete, to_set in history:
             dict_patch(infoset, to_delete, to_set)
             if infoset['datetime'] <= dt:
-                # Finally found it; encode and return the result
+                # Finally found it; encode and return the result.
                 return ujson.dumps(infoset)
 
         # Too bad, no result
