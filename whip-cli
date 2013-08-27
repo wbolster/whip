@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
+import itertools
 import json
 import logging
 import os
 import shutil
-from socket import inet_aton
+import socket
 import sys
 import tempfile
 import time
@@ -24,7 +25,7 @@ MAX_BUFFERED_RECORDS = 200 * 1000
 
 
 def lookup_and_print(db, ip, dt):
-    value = db.lookup(inet_aton(ip), dt)
+    value = db.lookup(socket.inet_aton(ip), dt)
     if value is None:
         print("No hit found")
     else:
@@ -113,23 +114,31 @@ def shell(database_dir, dt):
 @app.cmd(name='perftest', help="Run performance test")
 @app.cmd_arg('--iterations', '-n', default=100 * 1000, type=int,
              help="The number of iterations")
+@app.cmd_arg('--test-set', type=file)
 @app.cmd_arg('--datetime', '--dt', dest='dt')
-def perftest(database_dir, iterations, dt):
-    logger.info("Running %d iterations", iterations)
+def perftest(database_dir, iterations, test_set, dt):
     db = Database(database_dir)
     size = 4
 
-    # Use a sliding window over random data to obtain 4 bytes at a time
-    rand_bytes = os.urandom(iterations + size - 1)
+    if test_set:
+        logger.info("Using test set %r", test_set.name)
+        it = itertools.imap(str.strip, test_set)
+        it = itertools.imap(socket.inet_aton, it)
+    else:
+        logger.info("Running %d iterations with random IP addresses",
+                    iterations)
+        # Use a sliding window over random data to obtain 4 bytes at a time
+        rand_bytes = os.urandom(iterations + size - 1)
+        it = (rand_bytes[n:n + size] for n in xrange(iterations))
 
     lookup = db.lookup
     start_time = time.time()
-    for n in xrange(iterations):
-        lookup(rand_bytes[n:n + size], dt)
+    for n, ip in enumerate(it, 1):
+        lookup(ip, dt)
 
     elapsed = time.time() - start_time
     out = "{:d} lookups in {:.2f}s ({:.2f} req/s)".format(
-        iterations, elapsed, iterations / elapsed)
+        n, elapsed, n / elapsed)
     print(out)
 
 
