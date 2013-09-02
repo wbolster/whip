@@ -3,6 +3,8 @@
 Importer for Quova data sets.
 """
 
+# TODO: Use csv.DictReader instead and transform dict in-place?
+
 import collections
 import csv
 import datetime
@@ -18,86 +20,83 @@ logger = logging.getLogger(__name__)
 
 ISO8601_DATETIME_FMT = '%Y-%m-%dT%H:%M:%S'
 
-# Regular expression to match file names like
-# "EDITION_Gold_YYYY-MM-DD_vXXX.dat.gz"
+# Regular expression to match file names. From the docs:
+#
+#    Data File V7 Naming Convention
+#
+#    Every file is named with information that qualifies the intended
+#    recipient and data release information. The file name is named
+#    using the following components:
+#
+#    <QuovaNet_customer_id>_v<data_version>_<internal_id>_<yyyymmdd>.csv.gz
+#
+#    For example, a file created from release version 470.63, production
+#    job 15.27, on May 25, 2010 for customer quova would have the name:
+#    quova_v470.63_15.27_20100525.gz
+#
+# However, in reality, the suffix is '.csv.gz', not '.gz'.
+#
 DATA_FILE_RE = re.compile(r'''
     ^
-    EDITION_Gold_
-    (?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})  # date component
-    _v(?P<version>\d+)  # version number
-    \.dat\.gz  # file type
+    (?P<customer_id>.+)
+    _v(?P<version>.+)
+    _(?P<internal_id>.+)
+    _(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})
+    \.csv(:?\.gz)?
     $
     ''', re.VERBOSE)
 
 
-# Header names used in the reference files
-REF_HEADERS = frozenset(['carrier', 'org', 'sld', 'tld'])
-
+# Numeric fields
+NUMERIC_FIELDS = frozenset(('as', 'country_cf', 'state_cf', 'city_cf'))
 
 # Description of all fields in the .dat files
 QuovaRecord = collections.namedtuple('QuovaRecord', (
     'start_ip_int',
     'end_ip_int',
-    'cidr',
     'continent',
     'country',
-    'country_iso2',
+    'country_code',
     'country_cf',
     'region',
     'state',
+    'state_code',
     'state_cf',
     'city',
     'city_cf',
     'postal_code',
-    'phone_number_prefix',
-    'timezone',
+    'area_code',
+    'time_zone',
     'latitude',
     'longitude',
     'dma',
     'msa',
-    'pmsa',
-    'connectiontype',
-    'linespeed',
-    'ip_routingtype',
-    'aol',
+    'connection_type',
+    'line_speed',
+    'ip_routing_type',
     'asn',
-    'sld_id',
-    'tld_id',
-    'reg_org_id',
-    'carrier_id',
+    'sld',
+    'tld',
+    'organization',
+    'carrier',
+    'anonymizer_status',
 ))
 
 
 def clean(v):
     """Cleanup an input value"""
+    # TODO: is 'unknown' still used in v7?
     if v in ('', 'unknown'):
         return None
 
     return v
 
 
-def build_reference_db(db, fp):
-    """Generator to parse a reference set into records"""
-    ref_reader = csv.reader(fp, delimiter='|')
-
-    for row in ref_reader:
-        if not row[0] in REF_HEADERS:
-            raise ValueError(
-                "Unexpected input in reference data file: expected "
-                "header line, got %r" % (row))
-
-        ref_type, n, _ = row
-        for ref_id, value in itertools.islice(ref_reader, int(n)):
-            db.put(ref_type + ref_id, value)
-
-
 class QuovaImporter(object):
     """Importer for Quova data sets."""
 
-    def __init__(self, data_file, tmp_db, ref_lookups):
+    def __init__(self, data_file):
         self.data_file = data_file
-        self.tmp_db = tmp_db
-        self.ref_lookups = ref_lookups
 
     def iter_records(self):
         data_file = self.data_file
@@ -120,25 +119,12 @@ class QuovaImporter(object):
             "Detected date %s and version %d for data file %r",
             dt_as_str, version, data_file)
 
-        reference_file = data_file.replace('.dat.gz', '.ref.gz')
-        if not os.path.exists(reference_file):
-            raise RuntimeError("Reference file %r not found" % reference_file)
-
-        logger.info(
-            "Building temporary reference database from %r",
-            reference_file)
-
-        ref_db = self.tmp_db
-        if self.ref_lookups:
-            with open_file(reference_file) as ref_fp:
-                build_reference_db(ref_db, ref_fp)
-
-        logger.info("Reading data file %r", data_file)
-
         # Open CSV data file, clean each field in each input row, and
         # construct a QuovaRecord.
-        reader = csv.reader(open_file(data_file), delimiter='|')
+        fp = open_file(data_file)
+        reader = csv.reader(fp)
         it = iter(reader)
+        next(it)  # skip header line
         it = (map(clean, item) for item in it)
         it = itertools.starmap(QuovaRecord, it)
 
@@ -158,41 +144,45 @@ class QuovaImporter(object):
                 # Network information
                 'begin': ipv4_int_to_str(begin_ip_int),
                 'end': ipv4_int_to_str(end_ip_int),
-                'cidr': int(record.cidr),
-                'connection_type': record.connectiontype,
-                'line_speed': record.linespeed,
-                'ip_routing_type': record.ip_routingtype,
-                'asn': int(record.asn),
-
-                # Network information (reference database lookups)
-                'sld': clean(ref_db.get('sld' + record.sld_id)),
-                'tld': clean(ref_db.get('tld' + record.tld_id)),
-                'reg': clean(ref_db.get('org' + record.reg_org_id)),
-                'carrier': clean(ref_db.get('carrier' + record.carrier_id)),
+                'connection_type': record.connection_type,
+                'line_speed': record.line_speed,
+                'ip_routing_type': record.ip_routing_type,
+                'as': record.asn,
+                'sld': record.sld,
+                'tld': record.tld,
+                'organization': record.organization,
+                'carrier': record.carrier,
+                'anonymizer_status': record.anonymizer_status,
 
                 # Geographic information
                 'continent': record.continent,
                 'country': record.country,
-                'country_iso2': record.country_iso2,
-                'country_cf': int(record.country_cf),
+                'country_code': record.country_code,
+                'country_cf': record.country_cf,
                 'region': record.region,
                 'state': record.state,
-                'state_cf': int(record.state_cf),
+                'state_code': record.state_code,
+                'state_cf': record.state_cf,
                 'city': record.city,
-                'city_cf': int(record.city_cf),
+                'city_cf': record.city_cf,
                 'postal_code': record.postal_code,
-                'phone_number_prefix': record.phone_number_prefix,
+                'area_code': record.area_code,
                 'latitude': float(record.latitude),
                 'longitude': float(record.longitude),
             }
 
-            if record.timezone == '999':
-                out['timezone'] = None
+            # Convert numeric fields, but only if set
+            for key in NUMERIC_FIELDS:
+                if out[key] is not None:
+                    out[key] = int(out[key])
+
+            if record.time_zone == '999':  # FIXME: is this still used in v7?
+                out['time_zone'] = None
             else:
                 # Convert time zone information into ±HH:MM format
-                tz_f, hours = math.modf(float(record.timezone))
+                tz_f, hours = math.modf(float(record.time_zone))
                 minutes = abs(60 * tz_f)
-                out['timezone'] = '%+03d:%02d' % (hours, minutes)
+                out['time_zone'] = '%+03d:%02d' % (hours, minutes)
 
             yield begin_ip_int, end_ip_int, out
 

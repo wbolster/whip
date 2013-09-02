@@ -4,24 +4,17 @@ import itertools
 import json
 import logging
 import os
-import shutil
 import socket
 import sys
-import tempfile
 import time
 
 import aaargh
-import plyvel
 import ujson
 
 from whip.db import Database
-from whip.util import buffer_iter
 
 
 logger = logging.getLogger(__name__)
-
-BUFFERED_RECORDS_PER_IMPORTER = 10 * 1000
-MAX_BUFFERED_RECORDS = 200 * 1000
 
 
 def lookup_and_print(db, ip, dt):
@@ -40,55 +33,19 @@ app.arg('--database-dir', '--db', default='db')
 
 @app.cmd(name='load', help="Load data")
 @app.cmd_arg('data_files', nargs='+')
-@app.cmd_arg('--no-ref-lookups', dest='ref_lookups', action='store_false')
-def load_data(database_dir, data_files, ref_lookups):
+def load_data(database_dir, data_files):
+
+    from whip.importers.quova import QuovaImporter
 
     logger.info("Importing %d data files: %r", len(data_files), data_files)
 
-    if not ref_lookups:
-        logger.warning(
-            "Reference database lookups disabled; "
-            "resulting database will be incomplete!")
-
-    tmp_dir = tempfile.mkdtemp(prefix='whip-', suffix='.ldb')
-    logger.info("Creating temporary database in %r", tmp_dir)
-    tmp_db = plyvel.DB(
-        tmp_dir,
-        create_if_missing=True,
-        write_buffer_size=128 * 1024**2,  # 128 MB
-        lru_cache_size=1024**3,  # 1 GB
-        max_open_files=128,
-        bloom_filter_bits=10,
-    )
-
-    try:
-        from whip.importers.quova import QuovaImporter
-
-        prefix_generator = (chr(i) for i in xrange(256))
-        importers = [
-            QuovaImporter(
-                data_file=data_file,
-                tmp_db=tmp_db.prefixed_db(next(prefix_generator)),
-                ref_lookups=ref_lookups)
-            for data_file in data_files
-        ]
-
-        iters = [importer.iter_records() for importer in importers]
-
-        # Wrap into buffering generators to (hopefully) exploit the LRU
-        # cache in the temporary database.
-        bufsize = min(
-            BUFFERED_RECORDS_PER_IMPORTER,
-            MAX_BUFFERED_RECORDS / len(iters))
-        logger.info("Buffering %d records in memory per importer", bufsize)
-        iters = [buffer_iter(it, bufsize) for it in iters]
-
-        db = Database(database_dir, create_if_missing=True)
-        db.load(*iters)
-
-    finally:
-        tmp_db.close()
-        shutil.rmtree(tmp_dir)
+    importers = [
+        QuovaImporter(data_file)
+        for data_file in data_files
+    ]
+    iters = [importer.iter_records() for importer in importers]
+    db = Database(database_dir, create_if_missing=True)
+    db.load(*iters)
 
 
 @app.cmd(name="lookup")
