@@ -163,6 +163,10 @@ def convert_to_v7(data_fp, ref_fp, out_fp):
         record['sld'] = refs['sld'][int(record['sld_id'])]
         record['tld'] = refs['tld'][int(record['tld_id'])]
 
+        # Drop magic "empty" value for time zones
+        if record['time_zone'] == '999':
+            record['time_zone'] = ''
+
         # Write output
         writer.writerow(record)
 
