@@ -33,7 +33,16 @@ import operator
 import struct
 
 import plyvel
-import ujson
+try:
+    import ujson as json
+except ImportError:
+    try:
+        import simplejson as json
+    except ImportError:
+        import json
+
+json_dumps = json.dumps
+json_loads = json.loads
 
 from whip.util import (
     dict_diff,
@@ -57,11 +66,11 @@ def _build_db_record(begin_ip_int, end_ip_int, infosets):
     infosets.sort(key=operator.itemgetter('datetime'), reverse=True)
     latest = infosets[0]
     latest_datetime = latest['datetime']
-    latest_json = ujson.dumps(latest)
+    latest_json = json_dumps(latest)
 
     # ... while older versions are stored as (reverse) diffs to the
     # previous (in time) version.
-    history_json = ujson.dumps([
+    history_json = json_dumps([
         dict_diff(infosets[i + 1], infosets[i])
         for i in xrange(len(infosets) - 1)
     ])
@@ -168,13 +177,13 @@ class Database(object):
 
         # Too bad, we need to delve deeper into history. Decode JSON,
         # iteratively apply patches, and re-encode to JSON again.
-        infoset = ujson.loads(infoset_json)
-        history = ujson.loads(value[offset:])
+        infoset = json_loads(infoset_json)
+        history = json_loads(value[offset:])
         for to_delete, to_set in history:
             dict_patch(infoset, to_delete, to_set)
             if infoset['datetime'] <= dt:
                 # Finally found it; encode and return the result.
-                return ujson.dumps(infoset)
+                return json_dumps(infoset)
 
         # Too bad, no result
         return None
