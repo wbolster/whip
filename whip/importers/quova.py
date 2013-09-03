@@ -185,7 +185,7 @@ class QuovaImporter(object):
                 if out[key] is not None:
                     out[key] = int(out[key])
 
-            if record.time_zone == '999':  # FIXME: is this still used in v7?
+            if record.time_zone is None:
                 out['time_zone'] = None
             else:
                 # Convert time zone information into ±HH:MM format
