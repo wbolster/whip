@@ -311,6 +311,7 @@ def convert_to_v7(data_fp, ref_fp, out_fp):
 
     # Loop and transform
     logger.info("Transforming data file %r", data_fp.name)
+    n = 0
     for n, record in enumerate(reader, 1):
         for k, v in record.iteritems():
             record[k] = clean_old_format(v)
@@ -337,5 +338,4 @@ def convert_to_v7(data_fp, ref_fp, out_fp):
         # Write output
         writer.writerow(record)
 
-        if n % 100000 == 0:
-            logger.info("Converted %d input records", n)
+    logger.info("Saved %d records to %r", n, out_fp.name)
