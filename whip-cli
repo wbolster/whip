@@ -11,7 +11,6 @@ import sys
 import time
 
 import aaargh
-import ujson
 
 from whip.db import Database
 
@@ -26,7 +25,7 @@ def lookup_and_print(db, ip, dt):
     else:
         # XXX: UltraJSON (ujson) does not support pretty printing, so
         # use built-in JSON module instead.
-        print(json.dumps(ujson.loads(value), indent=2, sort_keys=True))
+        print(json.dumps(json.loads(value), indent=2, sort_keys=True))
 
 
 app = aaargh.App(description="Fast IP geo lookup")
