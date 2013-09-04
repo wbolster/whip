@@ -96,7 +96,6 @@ def clean(v):
     return v
 
 
-
 #
 # Importer
 #
@@ -118,14 +117,14 @@ class QuovaImporter(object):
                 % data_file)
 
         match_dict = match.groupdict()
-        version = int(match_dict['version'])
+        version = match_dict['version']
         dt = datetime.datetime(int(match_dict['year']),
                                int(match_dict['month']),
                                int(match_dict['day']))
         dt_as_str = dt.strftime(ISO8601_DATETIME_FMT)
 
         logger.info(
-            "Detected date %s and version %d for data file %r",
+            "Detected date %s and version %s for data file %r",
             dt_as_str, version, data_file)
 
         # Open CSV data file, clean each field in each input row, and
