@@ -65,7 +65,7 @@ def _build_db_record(begin_ip_int, end_ip_int, infosets):
     # full, ...
     infosets.sort(key=operator.itemgetter('datetime'), reverse=True)
     latest = infosets[0]
-    latest_datetime = latest['datetime']
+    latest_datetime = latest['datetime'].encode('ascii')
     latest_json = json_dumps(latest)
 
     # ... while older versions are stored as (reverse) diffs to the
