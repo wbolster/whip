@@ -162,7 +162,9 @@ class QuovaImporter(object):
                 out['time_zone'] = '%+03d:%02d' % (tz_int, abs(60 * tz_frac))
 
             yield begin_ip_int, end_ip_int, out
-            reporter.tick()
+
+            if n % 100 == 0:
+                reporter.tick()
 
         reporter.tick(True)
         logger.info("Finished reading %r (%d records)", data_file, n)

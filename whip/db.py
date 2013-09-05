@@ -124,7 +124,10 @@ class Database(object):
         for n, item in enumerate(merged, 1):
             key, value = _build_db_record(*item)
             self.db.put(key, value)
-            reporter.tick()
+
+            # Tick once in a while
+            if n % 100 == 0:
+                reporter.tick()
 
         reporter.tick(True)
 
