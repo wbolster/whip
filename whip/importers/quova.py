@@ -4,9 +4,6 @@
 Importer for Quova data sets.
 """
 
-# TODO: Use csv.DictReader instead and transform dict in-place?
-
-import collections
 import csv
 import datetime
 import itertools
@@ -47,11 +44,6 @@ DATA_FILE_RE = re.compile(r'''
     $
     ''', re.VERBOSE)
 
-
-# Numeric fields
-NUMERIC_FIELDS = frozenset(('as', 'country_cf', 'state_cf', 'city_cf'))
-
-# Description of all fields in the .dat files
 FIELDS = (
     'start_ip_int',
     'end_ip_int',
@@ -82,18 +74,13 @@ FIELDS = (
     'carrier',
     'anonymizer_status',
 )
+INTEGER_FIELDS = frozenset(('asn', 'country_cf', 'state_cf', 'city_cf'))
+FLOAT_FIELDS = frozenset(('latitude', 'longitude'))
+IGNORED_FIELDS = frozenset(('dma', 'msa'))
 
-# Structure for input records
-QuovaRecord = collections.namedtuple('QuovaRecord', FIELDS)
 
-
-def clean(v):
-    """Cleanup an input value"""
-    # TODO: is 'unknown' still used in v7?
-    if v in ('', 'unknown'):
-        return None
-
-    return v
+def clean_field(v):
+    return None if v == '' else v
 
 
 #
@@ -127,73 +114,54 @@ class QuovaImporter(object):
             "Detected date %s and version %s for data file %r",
             dt_as_str, version, data_file)
 
-        # Open CSV data file, clean each field in each input row, and
-        # construct a QuovaRecord.
+        # Prepare for reading the CSV data
         fp = open_file(data_file)
         reader = csv.reader(fp)
         it = iter(reader)
-        next(it)  # skip header line
-        it = (map(clean, item) for item in it)
-        it = itertools.starmap(QuovaRecord, it)
+
+        # Skip header line, but make sure it is actually a header line
+        header_line = next(it)
+        if header_line[0] != FIELDS[0]:
+            raise ValueError(
+                "First line of input file %r does not seem a header line"
+                % data_file)
 
         reporter = PeriodicCallback(lambda: logger.info(
             "Read %d records from %r; current position: %s",
             n, data_file, ipv4_int_to_str(begin_ip_int)))
 
+        izip = itertools.izip
         for n, record in enumerate(it, 1):
 
-            begin_ip_int = int(record.start_ip_int)
-            end_ip_int = int(record.end_ip_int)
+            out = dict(izip(FIELDS, map(clean_field, record)))
 
-            out = {
-                # Data file information
-                'datetime': dt_as_str,
+            # Data file information
+            out['datetime'] = dt_as_str
 
-                # Network information
-                'begin': ipv4_int_to_str(begin_ip_int),
-                'end': ipv4_int_to_str(end_ip_int),
-                'connection_type': record.connection_type,
-                'line_speed': record.line_speed,
-                'ip_routing_type': record.ip_routing_type,
-                'as': record.asn,
-                'sld': record.sld,
-                'tld': record.tld,
-                'organization': record.organization,
-                'carrier': record.carrier,
-                'anonymizer_status': record.anonymizer_status,
+            # Drop unwanted fields
+            for k in IGNORED_FIELDS:
+                del out[k]
 
-                # Geographic information
-                'continent': record.continent,
-                'country': record.country,
-                'country_code': record.country_code,
-                'country_cf': record.country_cf,
-                'region': record.region,
-                'state': record.state,
-                'state_code': record.state_code,
-                'state_cf': record.state_cf,
-                'city': record.city,
-                'city_cf': record.city_cf,
-                'postal_code': record.postal_code,
-                'area_code': record.area_code,
-                'latitude': float(record.latitude),
-                'longitude': float(record.longitude),
-            }
+            # Network information
+            begin_ip_int = int(out.pop('start_ip_int'))
+            end_ip_int = int(out.pop('end_ip_int'))
+            out['begin'] = ipv4_int_to_str(begin_ip_int)
+            out['end'] = ipv4_int_to_str(end_ip_int)
 
-            # Convert numeric fields, but only if set
-            for key in NUMERIC_FIELDS:
+            # Convert numeric fields (if not None)
+            for key in INTEGER_FIELDS:
                 if out[key] is not None:
                     out[key] = int(out[key])
+            for key in FLOAT_FIELDS:
+                if out[key] is not None:
+                    out[key] = float(out[key])
 
-            if record.time_zone is None:
-                out['time_zone'] = None
-            else:
-                # Convert time zone information into ±HH:MM format
-                tz_f, hours = math.modf(float(record.time_zone))
-                minutes = abs(60 * tz_f)
-                out['time_zone'] = '%+03d:%02d' % (hours, minutes)
+            # Convert time zone string like '-3.5' into ±HH:MM format
+            if out['time_zone'] is not None:
+                tz_frac, tz_int = math.modf(float(out['time_zone']))
+                out['time_zone'] = '%+03d:%02d' % (tz_int, abs(60 * tz_frac))
 
             yield begin_ip_int, end_ip_int, out
-
             reporter.tick()
 
         reporter.tick(True)
@@ -261,7 +229,7 @@ OLD_FORMAT_RENAMED_FIELDS = {
 OLD_FORMAT_EMPTY_VALUES = frozenset(('', 'unknown', 'none'))
 
 
-def clean_old_format(v):
+def clean_field_old_format(v):
     """Clean an input field (old data format)"""
     if v in OLD_FORMAT_EMPTY_VALUES:
         return None
@@ -292,7 +260,7 @@ def convert_to_v7(data_fp, ref_fp, out_fp):
 
         ref_type, n_records, max_id = row
         for ref_id, value in itertools.islice(ref_reader, int(n_records)):
-            refs[ref_type][int(ref_id)] = clean_old_format(value)
+            refs[ref_type][int(ref_id)] = clean_field_old_format(value)
 
     # Prepare reader
     reader = csv.DictReader(data_fp, OLD_FORMAT_FIELDS, delimiter='|')
@@ -313,7 +281,7 @@ def convert_to_v7(data_fp, ref_fp, out_fp):
     n = 0
     for n, record in enumerate(reader, 1):
         for k, v in record.iteritems():
-            record[k] = clean_old_format(v)
+            record[k] = clean_field_old_format(v)
 
         # Replace missing numerical values by empty strings
         for key in OLD_FORMAT_NUMERICAL_FIELDS:
