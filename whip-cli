@@ -13,6 +13,7 @@ import time
 import aaargh
 
 from whip.db import Database
+from whip.reader import iter_json
 
 
 logger = logging.getLogger(__name__)
@@ -33,18 +34,21 @@ app.arg('--database-dir', '--db', default='db')
 
 
 @app.cmd(name='load', help="Load data")
-@app.cmd_arg('data_files', nargs='+')
-def load_data(database_dir, data_files):
+@app.cmd_arg('inputs', type=file, nargs='+')
+def load_data(database_dir, inputs):
 
-    from whip.importers.quova import QuovaImporter
+    logger.info(
+        "Importing %d data files: %r",
+        len(inputs), ', '.join(x.name for x in inputs))
 
-    logger.info("Importing %d data files: %r", len(data_files), data_files)
+    def gzip_wrap(fp):
+        if fp.name.endswith('.gz'):
+            return gzip.GzipFile(mode='r', fileobj=fp)
+        else:
+            return fp
 
-    importers = [
-        QuovaImporter(data_file)
-        for data_file in data_files
-    ]
-    iters = [importer.iter_records() for importer in importers]
+    inputs = map(gzip_wrap, inputs)
+    iters = map(iter_json, inputs)
     db = Database(database_dir, create_if_missing=True)
     db.load(*iters)
 
