@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import gzip
 import itertools
 import json
