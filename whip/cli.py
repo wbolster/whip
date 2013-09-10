@@ -27,12 +27,12 @@ def lookup_and_print(db, ip, dt):
 
 
 app = aaargh.App(description="Fast IP geo lookup")
-app.arg('--database-dir', '--db', default='db')
+app.arg('--db', default='db', dest='db_dir')
 
 
 @app.cmd(name='load', help="Load data")
 @app.cmd_arg('inputs', type=file, nargs='+')
-def load_data(database_dir, inputs):
+def load_data(db_dir, inputs):
 
     logger.info(
         "Importing %d data files: %r",
@@ -46,23 +46,23 @@ def load_data(database_dir, inputs):
 
     inputs = map(gzip_wrap, inputs)
     iters = map(iter_json, inputs)
-    db = Database(database_dir, create_if_missing=True)
+    db = Database(db_dir, create_if_missing=True)
     db.load(*iters)
 
 
 @app.cmd(name="lookup")
 @app.cmd_arg('ips', help="The IP address(es) to lookup", nargs='+')
 @app.cmd_arg('--datetime', '--dt', dest='dt')
-def lookup(ips, database_dir, dt):
-    db = Database(database_dir)
+def lookup(ips, db_dir, dt):
+    db = Database(db_dir)
     for ip in ips:
         lookup_and_print(db, ip, dt)
 
 
 @app.cmd(name="shell")
 @app.cmd_arg('--datetime', '--dt', dest='dt')
-def shell(database_dir, dt):
-    db = Database(database_dir)
+def shell(db_dir, dt):
+    db = Database(db_dir)
     while True:
         ip = raw_input('IP: ')
         lookup_and_print(db, ip, dt)
@@ -73,8 +73,8 @@ def shell(database_dir, dt):
              help="The number of iterations")
 @app.cmd_arg('--test-set', type=file)
 @app.cmd_arg('--datetime', '--dt', dest='dt')
-def perftest(database_dir, iterations, test_set, dt):
-    db = Database(database_dir)
+def perftest(db_dir, iterations, test_set, dt):
+    db = Database(db_dir)
     size = 4
 
     if test_set:
@@ -102,9 +102,9 @@ def perftest(database_dir, iterations, test_set, dt):
 @app.cmd
 @app.cmd_arg('--host', default='0')
 @app.cmd_arg('--port', type=int, default=5555)
-def serve(host, port, database_dir):
+def serve(host, port, db_dir):
     from whip.web import app
-    app.config['DATABASE_DIR'] = database_dir
+    app.config['db_dir'] = db_dir
     app.run(host=host, port=port)
 
 
