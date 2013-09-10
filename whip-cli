@@ -5,7 +5,6 @@ import itertools
 import json
 import logging
 import os
-import re
 import socket
 import sys
 import time
@@ -109,47 +108,6 @@ def serve(host, port, database_dir):
     from whip.web import app
     app.config['DATABASE_DIR'] = database_dir
     app.run(host=host, port=port)
-
-
-@app.cmd(
-    name='quova-convert-to-v7',
-    description="Convert an older Quova data set into V7 format")
-@app.cmd_arg('data_file')
-@app.cmd_arg('--output-directory', '-o', required=True)
-def quova_convert(data_file, output_directory, **kwargs):
-    filename_regex = re.compile(
-        r'''
-        ^
-        EDITION_Gold_
-        (?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})
-        _v(?P<version>.+)
-        \.dat\.gz
-        $
-        ''',
-        re.VERBOSE)
-    m = re.match(filename_regex, os.path.basename(data_file))
-    if not m:
-        logger.error(
-            "Input file name %r does not match expected file name format",
-            data_file)
-        sys.exit(1)
-
-    fmt = 'converted_v{version}_dummy_{year}{month}{day}.csv.gz'
-    output_filename = fmt.format(**m.groupdict())
-
-    output_path = os.path.join(output_directory, output_filename)
-    reference_file = data_file.replace('.dat', '.ref')
-
-    logger.info(
-        "Converting input files %r and %r to output file %r",
-        data_file, reference_file, output_path)
-
-    data_fp = gzip.open(data_file, 'r')
-    reference_fp = gzip.open(reference_file, 'r')
-    output_fp = gzip.open(output_path, 'w')
-
-    from whip.importers.quova import convert_to_v7
-    convert_to_v7(data_fp, reference_fp, output_fp)
 
 
 def main():
