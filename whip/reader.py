@@ -1,5 +1,5 @@
 """
-Whip importer module.
+Whip reader module.
 """
 
 import ujson
