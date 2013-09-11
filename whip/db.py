@@ -28,8 +28,9 @@ database. The key/value layout is as follows:
 
 """
 
+from itertools import groupby, imap
 import logging
-import operator
+from operator import itemgetter
 import struct
 
 import plyvel
@@ -59,22 +60,47 @@ SIZE_STRUCT = struct.Struct('>H')
 logger = logging.getLogger(__name__)
 
 
+def _debug_format_infoset(d):
+    return ', '.join('%s=%s' % (k[:1], v or '')
+                     for k, v in sorted(d.iteritems()))
+
+
 def _build_db_record(begin_ip_int, end_ip_int, infosets):
     """Create database records for an iterable of merged infosets."""
 
-    # Build history structure. The latest version is stored in
-    # full, ...
-    infosets.sort(key=operator.itemgetter('datetime'), reverse=True)
-    latest = infosets[0]
+    assert len(infosets) > 0
+
+    # Copy dicts (instances are "borrowed" from merge_ranges()), so that
+    # we can mutate them.
+    infosets = [x.copy() for x in infosets]
+
+    # Squash history by grouping adjacent identical infosets. First pop
+    # the timestamp from each infoset, sort by date, then deduplicate
+    # based on the actual information, only keeping its oldest
+    # occurrence. Finally, add back the first timestamp to obtain
+    # infosets in the original format. (Deduplication approach based on
+    # the unique_justseen() recipe from the itertools docs.)
+    dates_and_info = sorted((d.pop('datetime'), d) for d in infosets)
+    ig_1 = itemgetter(1)
+    squashed = imap(next, imap(ig_1, groupby(dates_and_info, ig_1)))
+    squashed = list(squashed)  # completely evaluate grouper before
+                               # mutating the dicts it operates on
+    unique_infosets = []
+    for dt, infoset in squashed:
+        infoset['datetime'] = dt
+        unique_infosets.append(infoset)
+
+    # Most recent version is stored in full
+    latest = unique_infosets[-1]
     latest_datetime = latest['datetime'].encode('ascii')
     latest_json = json_dumps(latest)
 
-    # ... while older versions are stored as (reverse) diffs to the
-    # previous (in time) version.
-    history_json = json_dumps([
-        dict_diff(infosets[i + 1], infosets[i])
-        for i in xrange(len(infosets) - 1)
-    ])
+    # Build history structure with (reverse) diffs for each pair
+    history = [
+        dict_diff(unique_infosets[i - 1], unique_infosets[i])
+        for i in range(len(unique_infosets) - 1, 0, -1)
+    ]
+    history_json = json_dumps(history)
 
     # Build the actual key and value byte strings.
     # XXX: String concatenation seems faster than the''.join((..., ...))
