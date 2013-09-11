@@ -33,13 +33,14 @@ import operator
 import struct
 
 import plyvel
-try:
-    import ujson as json
-except ImportError:
+
+# Use fastest JSON implementation available
+for lib in ('ujson', 'simplejson', 'json'):
     try:
-        import simplejson as json
+        json = __import__(lib)
+        break
     except ImportError:
-        import json
+        pass
 
 json_dumps = json.dumps
 json_loads = json.loads
