@@ -104,7 +104,7 @@ def perftest(db_dir, iterations, test_set, dt):
 @app.cmd_arg('--port', type=int, default=5555)
 def serve(host, port, db_dir):
     from whip.web import app
-    app.config['db_dir'] = db_dir
+    app.config['DATABASE_DIR'] = db_dir
     app.run(host=host, port=port)
 
 
