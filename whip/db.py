@@ -78,13 +78,15 @@ def _build_db_record(begin_ip_int, end_ip_int, infosets):
     # the timestamp from each infoset, sort by date, then deduplicate
     # based on the actual information, only keeping its oldest
     # occurrence. Finally, add back the first timestamp to obtain
-    # infosets in the original format. (Deduplication approach based on
-    # the unique_justseen() recipe from the itertools docs.)
+    # infosets in the original format.
+    #
+    # The deduplication approach is based on the unique_justseen()
+    # recipe from the itertools docs. Note that we used the (list
+    # producing) map() function (not imap()) here to completely evaluate
+    # the grouper before mutating the dicts it operates on.
     dates_and_info = sorted((d.pop('datetime'), d) for d in infosets)
     ig_1 = itemgetter(1)
-    squashed = imap(next, imap(ig_1, groupby(dates_and_info, ig_1)))
-    squashed = list(squashed)  # completely evaluate grouper before
-                               # mutating the dicts it operates on
+    squashed = map(next, imap(ig_1, groupby(dates_and_info, ig_1)))
     unique_infosets = []
     for dt, infoset in squashed:
         infoset['datetime'] = dt
