@@ -139,6 +139,12 @@ def dict_diff(d, base):
 
     See also dict_patch().
     """
+    # The loop below is equivalent to
+    #
+    #   to_set = dict(d.viewitems() - base.viewitems())
+    #
+    # ...but the loop below is more performant for dicts with more than
+    # a few keys.
     to_set = {}
     for k, v in d.iteritems():
         if not k in base:
