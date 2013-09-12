@@ -34,7 +34,7 @@ def lookup(ip):
 
     info_as_json = db.lookup(key, dt)
     if info_as_json is None:
-        abort(404)
+        info_as_json = b'{}'  # empty dict, JSON-encoded
 
     response = make_response(info_as_json)
     response.headers['Content-type'] = 'application/json'
