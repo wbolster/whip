@@ -13,7 +13,6 @@ from whip.util import (
     ipv4_int_to_str,
     ipv4_str_to_int,
     merge_ranges,
-    buffer_iter,
 )
 
 
@@ -107,11 +106,3 @@ def test_dict_patching():
         recreated = base.copy()
         dict_patch(recreated, to_set, to_delete)
         assert_dict_equal(original, recreated)
-
-
-def test_iterator_buffering():
-    items = [1, 2, 3, 4]
-
-    assert_list_equal(
-        list(buffer_iter(items, 2)),
-        items)
