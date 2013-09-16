@@ -65,7 +65,7 @@ def _debug_format_infoset(d):
                      for k, v in sorted(d.iteritems()))
 
 
-def _build_db_record(begin_ip_int, end_ip_int, infosets):
+def _build_db_record(begin_ip_int, end_ip_int, infosets, _ig1=itemgetter(1)):
     """Create database records for an iterable of merged infosets."""
 
     assert len(infosets) > 0
@@ -74,30 +74,45 @@ def _build_db_record(begin_ip_int, end_ip_int, infosets):
     # we can mutate them.
     infosets = [x.copy() for x in infosets]
 
-    # Squash history by grouping adjacent identical infosets. First pop
-    # the timestamp from each infoset, sort by date, then deduplicate
-    # based on the actual information, only keeping its oldest
-    # occurrence. Finally, add back the first timestamp to obtain
-    # infosets in the original format.
+    # Squash history by grouping adjacent identical infosets. Each
+    # infoset will have a different timestamp, so first pop (and
+    # remember) the timestamp from each infoset before doing the actual
+    # comparison, then sort by ascending date so that we can iterate
+    # chronologically.
+    dates_and_info = [(d.pop('datetime'), d) for d in infosets]
+    dates_and_info.sort()
+
+    # Now group identical information (not taking the date into
+    # account), only keeping its oldest occurrence. This deduplication
+    # approach is based on the unique_justseen() recipe from the
+    # itertools docs. Notes:
     #
-    # The deduplication approach is based on the unique_justseen()
-    # recipe from the itertools docs. Note that we used the (list
-    # producing) map() function (not imap()) here to completely evaluate
-    # the grouper before mutating the dicts it operates on.
-    dates_and_info = sorted((d.pop('datetime'), d) for d in infosets)
-    ig_1 = itemgetter(1)
-    squashed = map(next, imap(ig_1, groupby(dates_and_info, ig_1)))
+    # * The infoset in each (dt, infoset) tuple serves as the key for
+    #   the grouper, and the imap(next, imap(...)) trick extracts the
+    #   first infoset from each group.
+    #
+    # * Turn the result into a list, since subsequent code modifies the
+    #   dicts, which would break the grouping if done lazily, since the
+    #   grouping compares the dicts.
+    squashed = list(imap(next, imap(_ig1, groupby(dates_and_info, _ig1))))
+
+    # Add back the first timestamp to obtain infosets in the original
+    # format. After this loop 'unique_infosets' contains only unique
+    # information.
     unique_infosets = []
     for dt, infoset in squashed:
-        infoset['datetime'] = dt
+        infoset['datetime'] = dt  # store oldest datetime for this infoset
         unique_infosets.append(infoset)
 
-    # Most recent version is stored in full
+    # The most recent infoset is stored in full
     latest = unique_infosets[-1]
     latest_datetime = latest['datetime'].encode('ascii')
     latest_json = json_dumps(latest)
 
-    # Build history structure with (reverse) diffs for each pair
+    # Older infosets are stored in a history structure with (reverse)
+    # diffs for each pair. This saves a lot of storage space, but
+    # requires "patching" during lookups is. Since the storage layer is
+    # faster when working with smaller values, the trade-off.
     history = [
         dict_diff(unique_infosets[i - 1], unique_infosets[i])
         for i in range(len(unique_infosets) - 1, 0, -1)
