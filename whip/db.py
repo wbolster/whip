@@ -35,22 +35,13 @@ import struct
 
 import plyvel
 
-# Use fastest JSON implementation available
-for lib in ('ujson', 'simplejson', 'json'):
-    try:
-        json = __import__(lib)
-        break
-    except ImportError:
-        pass
-
-json_dumps = json.dumps
-json_loads = json.loads
-
 from whip.util import (
     dict_diff,
     dict_patch,
     ipv4_int_to_bytes,
     ipv4_int_to_str,
+    json_dumps,
+    json_loads,
     merge_ranges,
     PeriodicCallback,
 )

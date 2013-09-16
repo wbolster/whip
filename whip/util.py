@@ -7,6 +7,14 @@ import struct
 import subprocess
 import time
 
+# Use fastest JSON implementation available
+for lib in ('ujson', 'simplejson', 'json'):
+    try:
+        json = __import__(lib)
+        break
+    except ImportError:
+        pass
+
 
 __all__ = [
     'ipv4_int_to_str',
@@ -17,6 +25,9 @@ __all__ = [
     'open_file',
     'PeriodicCallback',
 ]
+
+json_dumps = json.dumps
+json_loads = json.loads
 
 EVENT_TYPE_BEGIN = 0
 EVENT_TYPE_END = 1
