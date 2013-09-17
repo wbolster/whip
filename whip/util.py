@@ -4,7 +4,6 @@ import itertools
 import operator
 import socket
 import struct
-import subprocess
 import time
 
 # Use fastest JSON implementation available
@@ -22,7 +21,6 @@ __all__ = [
     'ipv4_int_to_bytes',
     'ipv4_bytes_to_int',
     'merge_ranges',
-    'open_file',
     'PeriodicCallback',
 ]
 
@@ -111,33 +109,6 @@ def merge_ranges(*inputs):
 
     # After consuming all changes, all ranges must be closed.
     assert len(active) == 0
-
-
-def open_file(filename):
-    """Open a file, transparently decompressing it if possible.
-
-    Supported file name suffixes are '.gz', '.bz2', and '.xz'.
-
-    This function uses an external process for decompression. This is
-    often faster than using built-in modules, and also takes advantage
-    of multiple CPU cores.
-    """
-
-    args = None
-    if filename.endswith('.gz'):
-        args = ['zcat', filename]
-    elif filename.endswith('.bz2'):
-        args = ['bzcat', filename]
-    elif filename.endswith('.xz'):
-        args = ['xzcat', filename]
-
-    if args:
-        proc = subprocess.Popen(args, stdout=subprocess.PIPE)
-        fp = proc.stdout
-    else:
-        fp = open(filename)
-
-    return fp
 
 
 def dict_diff(d, base):
