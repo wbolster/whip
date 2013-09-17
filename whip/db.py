@@ -56,7 +56,7 @@ def _debug_format_infoset(d):
                      for k, v in sorted(d.iteritems()))
 
 
-def squash_infosets(infosets, _ig1=itemgetter(1)):
+def squash_history(infosets, _ig1=itemgetter(1)):
     """Squash history by grouping adjacent identical infosets.
 
     This functions takes a list of infosets and returns only the unique
@@ -111,7 +111,7 @@ def build_record(begin_ip_int, end_ip_int, infosets):
     infosets = [x.copy() for x in infosets]
 
     # Deduplicate
-    unique_infosets = squash_infosets(infosets)
+    unique_infosets = squash_history(infosets)
 
     # The most recent infoset is stored in full
     latest = unique_infosets[-1]
