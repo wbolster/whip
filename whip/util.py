@@ -6,15 +6,6 @@ import socket
 import struct
 import time
 
-# Use fastest JSON implementation available
-for lib in ('ujson', 'simplejson', 'json'):
-    try:
-        json = __import__(lib)
-        break
-    except ImportError:
-        pass
-
-
 __all__ = [
     'ipv4_int_to_str',
     'ipv4_str_to_int',
@@ -24,8 +15,6 @@ __all__ = [
     'PeriodicCallback',
 ]
 
-json_dumps = json.dumps
-json_loads = json.loads
 
 #
 # IP address conversion utilities

@@ -2,7 +2,8 @@
 Whip reader module.
 """
 
-from whip.util import ipv4_str_to_int, json_loads
+from whip.json import loads
+from whip.util import ipv4_str_to_int
 
 DEFAULT_RANGE_FIELDS = ('begin', 'end')
 
@@ -21,12 +22,12 @@ def iter_json(fp, range_fields=DEFAULT_RANGE_FIELDS):
 
     begin_field, end_field = range_fields
     _ipv4_str_to_int = ipv4_str_to_int
-    _json_loads = json_loads
+    _loads = loads
 
     for line in fp:
-        doc = _json_loads(line)
+        doc = _loads(line)
         yield (
             _ipv4_str_to_int(doc[begin_field]),
             _ipv4_str_to_int(doc[end_field]),
-            doc
+            doc,
         )

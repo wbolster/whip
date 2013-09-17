@@ -35,16 +35,16 @@ import struct
 
 import plyvel
 
+from whip.json import dumps, loads
 from whip.util import (
     dict_diff,
     dict_patch,
     ipv4_int_to_bytes,
     ipv4_int_to_str,
-    json_dumps,
-    json_loads,
     merge_ranges,
     PeriodicCallback,
 )
+
 
 SIZE_STRUCT = struct.Struct('>H')
 
@@ -116,7 +116,7 @@ def build_record(begin_ip_int, end_ip_int, infosets):
     # The most recent infoset is stored in full
     latest = unique_infosets[-1]
     latest_datetime = latest['datetime'].encode('ascii')
-    latest_json = json_dumps(latest)
+    latest_json = dumps(latest)
 
     # Older infosets are stored in a history structure with (reverse)
     # diffs for each pair. This saves a lot of storage space, but
@@ -126,7 +126,7 @@ def build_record(begin_ip_int, end_ip_int, infosets):
         dict_diff(unique_infosets[i - 1], unique_infosets[i])
         for i in range(len(unique_infosets) - 1, 0, -1)
     ]
-    history_json = json_dumps(history)
+    history_json = dumps(history)
 
     # Build the actual key and value byte strings.
     # XXX: String concatenation seems faster than the''.join((..., ...))
@@ -233,13 +233,13 @@ class Database(object):
 
         # Too bad, we need to delve deeper into history. Decode JSON,
         # iteratively apply patches, and re-encode to JSON again.
-        infoset = json_loads(infoset_json)
-        history = json_loads(value[offset:])
+        infoset = loads(infoset_json)
+        history = loads(value[offset:])
         for to_delete, to_set in history:
             dict_patch(infoset, to_delete, to_set)
             if infoset['datetime'] <= dt:
                 # Finally found it; encode and return the result.
-                return json_dumps(infoset)
+                return dumps(infoset)
 
         # Too bad, no result
         return None
