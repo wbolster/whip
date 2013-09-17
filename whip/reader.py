@@ -18,6 +18,9 @@ def iter_json(fp, range_fields=DEFAULT_RANGE_FIELDS):
     The input must already be sorted by IP range, and the ranges must
     not overlap.
 
+    This function yields ``(begin, end, doc)`` tuples, where both
+    `begin` and `end` are integer representations of the IP addresses
+    contained in the document.
     """
 
     begin_field, end_field = range_fields
