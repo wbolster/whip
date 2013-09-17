@@ -13,6 +13,7 @@ from whip.util import (
     ipv4_int_to_str,
     ipv4_str_to_int,
     merge_ranges,
+    squash_history,
 )
 
 
@@ -106,3 +107,42 @@ def test_dict_patching():
         recreated = base.copy()
         dict_patch(recreated, to_set, to_delete)
         assert_dict_equal(original, recreated)
+
+
+def test_squashing():
+
+    inputs = [
+
+        # First group of identical info
+        dict(a=1, datetime=2),
+        dict(a=1, datetime=3),
+        # no datetime=4 here
+        dict(a=1, datetime=5),
+        dict(a=1, datetime=6),
+        dict(a=1, datetime=7),
+
+        # Second group of identical info
+        dict(a=2, datetime=8),
+        dict(a=2, datetime=9),
+        dict(a=2, datetime=10),
+        dict(a=2, datetime=11),
+        dict(a=2, datetime=12),
+        dict(a=2, datetime=13),
+
+        # Oldest information
+        dict(a=0, datetime=1),
+
+        # Other info, datetiem in between
+        dict(a=3, datetime=4)
+    ]
+
+    squashed = squash_history(inputs)
+
+    expected = [
+        dict(a=0, datetime=1),
+        dict(a=1, datetime=2),
+        dict(a=3, datetime=4),
+        dict(a=1, datetime=5),
+        dict(a=2, datetime=8),
+    ]
+    assert_list_equal(squashed, expected)

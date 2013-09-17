@@ -28,9 +28,7 @@ database. The key/value layout is as follows:
 
 """
 
-from itertools import groupby, imap
 import logging
-from operator import itemgetter
 import struct
 
 import plyvel
@@ -43,6 +41,7 @@ from whip.util import (
     ipv4_int_to_str,
     merge_ranges,
     PeriodicCallback,
+    squash_history,
 )
 
 
@@ -54,51 +53,6 @@ logger = logging.getLogger(__name__)
 def _debug_format_infoset(d):
     return ', '.join('%s=%s' % (k[:1], v or '')
                      for k, v in sorted(d.iteritems()))
-
-
-def squash_history(infosets, _ig1=itemgetter(1)):
-    """Squash history by grouping adjacent identical infosets.
-
-    This functions takes a list of infosets and returns only the unique
-    information, sorted chronologically. Adjacent infosets with
-    identical information (i.e. unchanged information) will be merged
-    into a single infoset using the oldest timestamp (i.e. when did this
-    information first occur).
-    """
-
-    # Step 1: preparation. Each infoset will have a different timestamp,
-    # so first pop (and remember) the timestamp from each infoset before
-    # doing the actual comparison, then sort by ascending date so that
-    # we can iterate chronologically.
-    dates_and_info = [(d.pop('datetime'), d) for d in infosets]
-    dates_and_info.sort()
-
-    # Step 2: deduplication. Group identical information, not taking the
-    # date into account, and only keep the oldest occurrence of each
-    # unique infoset.
-    #
-    # Implementation notes:
-    #
-    # * Approach is based on the unique_justseen() recipe from the
-    #   itertools docs.
-    #
-    # * The infoset in each (dt, infoset) tuple serves as the key for
-    #   the grouper, and the imap(next, imap(...)) trick extracts the
-    #   first infoset from each group.
-    #
-    # * Turn the result into a list, since the code below modifies the
-    #   dicts, which would break the grouping if done lazily, since the
-    #   grouping compares the dicts.
-    squashed = list(imap(next, imap(_ig1, groupby(dates_and_info, _ig1))))
-
-    # Step 3: transform to original format. Add back the timestamp to
-    # obtain infosets in the original format.
-    result = []
-    for dt, infoset in squashed:
-        infoset['datetime'] = dt  # store oldest datetime for this infoset
-        result.append(infoset)
-
-    return result
 
 
 def build_record(begin_ip_int, end_ip_int, infosets):
