@@ -27,12 +27,11 @@ __all__ = [
 json_dumps = json.dumps
 json_loads = json.loads
 
-EVENT_TYPE_BEGIN = 0
-EVENT_TYPE_END = 1
+#
+# IP address conversion utilities
+#
 
 IPV4_STRUCT = struct.Struct('>L')
-
-DEFAULT_CALLBACK_INTERVAL = 10
 
 
 def ipv4_int_to_str(n, _inet_ntoa=socket.inet_ntoa, _pack=IPV4_STRUCT.pack):
@@ -62,6 +61,14 @@ def ipv4_bytes_to_int(b, _unpack=IPV4_STRUCT.unpack):
 def ipv4_int_to_bytes(n, _pack=IPV4_STRUCT.pack):
     """Convert an integer into 4 byte string"""
     return _pack(n)
+
+
+#
+# Range merging
+#
+
+EVENT_TYPE_BEGIN = 0
+EVENT_TYPE_END = 1
 
 
 def merge_ranges(*inputs):
@@ -111,6 +118,10 @@ def merge_ranges(*inputs):
     assert len(active) == 0
 
 
+#
+# Dict diffing
+#
+
 def dict_diff(d, base):
     """
     Calculate differences between a dict and a base dict.
@@ -147,6 +158,13 @@ def dict_patch(d, to_set, to_delete):
     d.update(to_set)
     for k in to_delete:
         del d[k]
+
+
+#
+# Progress logging
+#
+
+DEFAULT_CALLBACK_INTERVAL = 10
 
 
 class PeriodicCallback(object):
