@@ -56,7 +56,7 @@ def _debug_format_infoset(d):
                      for k, v in sorted(d.iteritems()))
 
 
-def _squash_infosets(infosets, _ig1=itemgetter(1)):
+def squash_infosets(infosets, _ig1=itemgetter(1)):
     """Squash history by grouping adjacent identical infosets.
 
     This functions takes a list of infosets and returns only the unique
@@ -101,7 +101,7 @@ def _squash_infosets(infosets, _ig1=itemgetter(1)):
     return result
 
 
-def _build_db_record(begin_ip_int, end_ip_int, infosets):
+def build_record(begin_ip_int, end_ip_int, infosets):
     """Create database records for an iterable of merged infosets."""
 
     assert len(infosets) > 0
@@ -111,7 +111,7 @@ def _build_db_record(begin_ip_int, end_ip_int, infosets):
     infosets = [x.copy() for x in infosets]
 
     # Deduplicate
-    unique_infosets = _squash_infosets(infosets)
+    unique_infosets = squash_infosets(infosets)
 
     # The most recent infoset is stored in full
     latest = unique_infosets[-1]
@@ -175,7 +175,7 @@ class Database(object):
 
         n = 0
         for n, item in enumerate(merged, 1):
-            key, value = _build_db_record(*item)
+            key, value = build_record(*item)
             self.db.put(key, value)
 
             # Tick once in a while
