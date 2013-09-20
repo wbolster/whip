@@ -36,10 +36,10 @@ import plyvel
 
 from whip.json import dumps, loads
 from whip.util import (
+    dict_diff_decremental,
     dict_patch,
     ipv4_int_to_bytes,
     ipv4_int_to_str,
-    make_reverse_diffs,
     merge_ranges,
     PeriodicCallback,
     squash_duplicate_dicts,
@@ -80,7 +80,7 @@ def build_record(begin_ip_int, end_ip_int, infosets):
     # (faster) and decode it when querying (slower), or store more data
     # (slower) without any decoding (faster). The former works better in
     # practice, especially when data sizes grow.
-    history = make_reverse_diffs(unique_infosets)
+    history = dict_diff_decremental(unique_infosets)
     history_json = dumps(history)
 
     # Build the actual key and value byte strings.

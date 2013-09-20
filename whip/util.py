@@ -151,6 +151,22 @@ def dict_patch(d, to_set, to_delete):
         del d[k]
 
 
+def dict_diff_decremental(dicts):
+    """Create a list of decremental diffs for a sorted list of dicts.
+
+    The input should be sorted from oldest to latest. The output is in
+    reverse older, i.e. from latest to oldest. This means that the
+    latest version (`dicts[-1]`) is required as the starting point when
+    patching.
+
+    For `n` input dicts, `n - 1` reverse diffs will be return.
+    """
+    return [
+        dict_diff(dicts[i - 1], dicts[i])
+        for i in range(len(dicts) - 1, 0, -1)
+    ]
+
+
 def squash_duplicate_dicts(
         dicts, ignored_key=None,
         _ig1=operator.itemgetter(1), _NOT_SET=object()):
@@ -211,21 +227,3 @@ class PeriodicCallback(object):
         if force_report or time.time() - self._last_report > self._interval:
             self._cb()
             self._last_report = time.time()
-
-
-#
-# History squashing and diffing
-#
-
-def make_reverse_diffs(infosets):
-    """Create a list of reverse diffs for a sorted list of infoset.
-
-    For `n` input infosets, this creates `n - 1` reverse diffs. The
-    input should be sorted chronologically (oldest to newest). The
-    output is in reverse order (newest to oldest). This means the most
-    recent infoset is required as the start point when patching.
-    """
-    return [
-        dict_diff(infosets[i - 1], infosets[i])
-        for i in range(len(infosets) - 1, 0, -1)
-    ]
