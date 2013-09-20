@@ -205,8 +205,8 @@ def squash_history(infosets, _ig1=operator.itemgetter(1)):
     #   the grouper, and the imap(next, imap(...)) trick extracts the
     #   first infoset from each group.
     #
-    # * Turn the result into a list, since the code below modifies the
-    #   dicts, which would break the grouping if done lazily, since the
+    # * Turn the result into a list, since step 3 modifies the dicts,
+    #   which would break the grouping if done lazily, since the
     #   grouping compares the dicts.
     squashed = list(imap(next, imap(_ig1, groupby(dates_and_info, _ig1))))
 
