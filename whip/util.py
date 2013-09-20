@@ -121,6 +121,9 @@ def dict_diff(d, base):
     with all items in `d` that were either unset or changed, and
     a `to_delete` tuple with all removed keys.
 
+    Note: this function does not recursively compare dicts; only the
+    keys and values in the supplied dicts will be compared.
+
     See also dict_patch().
     """
     # The loop below is equivalent to
