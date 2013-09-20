@@ -137,7 +137,8 @@ class Database(object):
             if n % 100 == 0:
                 reporter.tick()
 
-        reporter.tick(True)
+        if n > 0:
+            reporter.tick(True)
 
         # Refresh iterator so that it sees the new data
         self._make_iter()
