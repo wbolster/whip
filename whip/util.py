@@ -172,7 +172,7 @@ class PeriodicCallback(object):
 
 
 #
-# History squashing
+# History squashing and diffing
 #
 
 def squash_history(infosets, _ig1=operator.itemgetter(1)):
@@ -218,3 +218,17 @@ def squash_history(infosets, _ig1=operator.itemgetter(1)):
         result.append(infoset)
 
     return result
+
+
+def make_reverse_diffs(infosets):
+    """Create a list of reverse diffs for a sorted list of infoset.
+
+    For `n` input infosets, this creates `n - 1` reverse diffs. The
+    input should be sorted chronologically (oldest to newest). The
+    output is in reverse order (newest to oldest). This means the most
+    recent infoset is required as the start point when patching.
+    """
+    return [
+        dict_diff(infosets[i - 1], infosets[i])
+        for i in range(len(infosets) - 1, 0, -1)
+    ]

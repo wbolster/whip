@@ -35,13 +35,13 @@ import plyvel
 
 from whip.json import dumps, loads
 from whip.util import (
-    dict_diff,
     dict_patch,
     ipv4_int_to_bytes,
     ipv4_int_to_str,
     merge_ranges,
     PeriodicCallback,
     squash_history,
+    make_reverse_diffs,
 )
 
 
@@ -74,12 +74,13 @@ def build_record(begin_ip_int, end_ip_int, infosets):
 
     # Older infosets are stored in a history structure with (reverse)
     # diffs for each pair. This saves a lot of storage space, but
-    # requires "patching" during lookups is. Since the storage layer is
-    # faster when working with smaller values, the trade-off.
-    history = [
-        dict_diff(unique_infosets[i - 1], unique_infosets[i])
-        for i in range(len(unique_infosets) - 1, 0, -1)
-    ]
+    # requires "patching" during lookups. Since the storage layer is
+    # faster when working with smaller values, this is a trade-off
+    # between storage size and retrieval speed: either store less data
+    # (faster) and decode it when querying (slower), or store more data
+    # (slower) without any decoding (faster). The former works better in
+    # practice, especially when data sizes grow.
+    history = make_reverse_diffs(unique_infosets)
     history_json = dumps(history)
 
     # Build the actual key and value byte strings.
