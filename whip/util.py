@@ -110,7 +110,7 @@ def merge_ranges(*inputs):
 
 
 #
-# Dict diffing
+# Dict diffing and squashing
 #
 
 def dict_diff(d, base):
@@ -151,6 +151,48 @@ def dict_patch(d, to_set, to_delete):
         del d[k]
 
 
+def squash_duplicate_dicts(
+        dicts, ignored_key=None,
+        _ig1=operator.itemgetter(1), _NOT_SET=object()):
+    """Deduplicate a list of dicts by squashing adjacent identical dicts.
+
+    This functions takes a list of dicts and returns only the first dict
+    of each "run" of identical dicts, in the original order, i.e.
+    `[d1, d1, d1, d2, d2, d3, d1]` results in `[d1, d2, d3, d1]`.
+
+    The `ignored_key` arg specifies a key to ignore when comparing the
+    dict (which uses a normal `d1 == d2` equality test).
+    """
+    # Step 1: preparation. Pop (and remember) the key to ignore, but
+    # first copy the dicts (instances are "borrowed"), so that we can
+    # safely mutate them.
+    dicts = [d.copy() for d in dicts]
+    transformed = [(d.pop(ignored_key, _NOT_SET), d) for d in dicts]
+
+    # Step 2: deduplication. Group identical information, keeping only
+    # the first occurrence of each unique dict. The implementation is
+    # based on the unique_justseen() recipe from the itertools docs:
+    # group by actual value and take only the first item of each
+    # group.
+    #
+    # Note: the grouper is a generator (lazy), so explicitly turn the
+    # result into a list, as the dicts will be modified inside the loop
+    # below. Not doing so breaks the comparison inside the grouper.
+    squashed = list(imap(next, imap(_ig1, groupby(transformed, _ig1))))
+
+    # Step 3: transform to original format. Add back the ignored key to obtain
+    # dicts in the original format.
+    uniques = []
+    _append = uniques.append
+    for ignored_value, d in squashed:
+        if ignored_value is not _NOT_SET:
+            # Write back previously extracted ignored key/value (if any)
+            d[ignored_key] = ignored_value
+        _append(d)
+
+    return uniques
+
+
 #
 # Progress logging
 #
@@ -174,51 +216,6 @@ class PeriodicCallback(object):
 #
 # History squashing and diffing
 #
-
-def squash_history(infosets, _ig1=operator.itemgetter(1)):
-    """Squash history by grouping adjacent identical infosets.
-
-    This functions takes a list of infosets and returns only the unique
-    information, sorted chronologically. Adjacent infosets with
-    identical information (i.e. unchanged information) will be merged
-    into a single infoset using the oldest timestamp (i.e. when did this
-    information first occur).
-    """
-
-    # Step 1: preparation. Each infoset will have a different timestamp,
-    # so first pop (and remember) the timestamp from each infoset before
-    # doing the actual comparison, then sort by ascending date so that
-    # we can iterate chronologically.
-    dates_and_info = [(d.pop('datetime'), d) for d in infosets]
-    dates_and_info.sort()
-
-    # Step 2: deduplication. Group identical information, not taking the
-    # date into account, and only keep the oldest occurrence of each
-    # unique infoset.
-    #
-    # Implementation notes:
-    #
-    # * Approach is based on the unique_justseen() recipe from the
-    #   itertools docs.
-    #
-    # * The infoset in each (dt, infoset) tuple serves as the key for
-    #   the grouper, and the imap(next, imap(...)) trick extracts the
-    #   first infoset from each group.
-    #
-    # * Turn the result into a list, since step 3 modifies the dicts,
-    #   which would break the grouping if done lazily, since the
-    #   grouping compares the dicts.
-    squashed = list(imap(next, imap(_ig1, groupby(dates_and_info, _ig1))))
-
-    # Step 3: transform to original format. Add back the timestamp to
-    # obtain infosets in the original format.
-    result = []
-    for dt, infoset in squashed:
-        infoset['datetime'] = dt  # store oldest datetime for this infoset
-        result.append(infoset)
-
-    return result
-
 
 def make_reverse_diffs(infosets):
     """Create a list of reverse diffs for a sorted list of infoset.

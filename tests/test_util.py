@@ -1,4 +1,6 @@
 
+from operator import itemgetter
+
 from nose.tools import (
     assert_dict_equal,
     assert_equal,
@@ -13,7 +15,7 @@ from whip.util import (
     ipv4_int_to_str,
     ipv4_str_to_int,
     merge_ranges,
-    squash_history,
+    squash_duplicate_dicts,
 )
 
 
@@ -132,11 +134,12 @@ def test_squashing():
         # Oldest information
         dict(a=0, datetime=1),
 
-        # Other info, datetiem in between
+        # Other info, datetime in between
         dict(a=3, datetime=4)
     ]
 
-    squashed = squash_history(inputs)
+    inputs.sort(key=itemgetter('datetime'))
+    squashed = squash_duplicate_dicts(inputs, ignored_key='datetime')
 
     expected = [
         dict(a=0, datetime=1),

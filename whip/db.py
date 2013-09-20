@@ -29,6 +29,7 @@ database. The key/value layout is as follows:
 """
 
 import logging
+import operator
 import struct
 
 import plyvel
@@ -38,16 +39,17 @@ from whip.util import (
     dict_patch,
     ipv4_int_to_bytes,
     ipv4_int_to_str,
+    make_reverse_diffs,
     merge_ranges,
     PeriodicCallback,
-    squash_history,
-    make_reverse_diffs,
+    squash_duplicate_dicts,
 )
 
 
-SIZE_STRUCT = struct.Struct('>H')
-
 logger = logging.getLogger(__name__)
+
+DATETIME_GETTER = operator.itemgetter('datetime')
+SIZE_STRUCT = struct.Struct('>H')
 
 
 def _debug_format_infoset(d):
@@ -60,12 +62,10 @@ def build_record(begin_ip_int, end_ip_int, infosets):
 
     assert len(infosets) > 0
 
-    # Copy dicts (instances are "borrowed" from merge_ranges()), so that
-    # we can mutate them.
-    infosets = [x.copy() for x in infosets]
-
-    # Deduplicate
-    unique_infosets = squash_history(infosets)
+    # Deduplicate. Each infoset will have a different timestamp, so sort
+    # chronologically, and ignore the datetime while deduplicating.
+    infosets.sort(key=DATETIME_GETTER)
+    unique_infosets = squash_duplicate_dicts(infosets, ignored_key='datetime')
 
     # The most recent infoset is stored in full
     latest = unique_infosets[-1]
