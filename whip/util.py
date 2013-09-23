@@ -135,7 +135,7 @@ def dict_diff(d, base):
     to_set = {}
     for k, v in d.items():
         if not k in base:
-            to_set[k] = d[k]  # addition
+            to_set[k] = v  # addition
         elif base[k] != v:
             to_set[k] = v  # mutation
 
