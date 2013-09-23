@@ -128,7 +128,7 @@ def dict_diff(d, base):
     """
     # The loop below is equivalent to
     #
-    #   to_set = dict(d.viewitems() - base.viewitems())
+    #   to_set = dict(d.items() - base.items())
     #
     # ...but the loop below is more performant for dicts with more than
     # a few keys.
