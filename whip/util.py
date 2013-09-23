@@ -162,7 +162,7 @@ def dict_diff_decremental(dicts):
     latest version (`dicts[-1]`) is required as the starting point when
     patching.
 
-    For `n` input dicts, `n - 1` reverse diffs will be return.
+    For `n` input dicts, `n - 1` reverse diffs will be returned.
     """
     return [
         dict_diff(dicts[i - 1], dicts[i])
