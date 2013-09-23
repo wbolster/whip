@@ -31,7 +31,7 @@ information::
 Dependencies
 ============
 
-* *Python* 2.7+
+* *Python* 3.3+ (no Python 2 support!)
 * *Plyvel* to access *LevelDB* from Python
 * *Flask* for the REST API
 * *Aaargh* for the command line tool

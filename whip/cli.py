@@ -1,8 +1,6 @@
 
-from __future__ import absolute_import
-
+import argparse
 import gzip
-import itertools
 import json
 import logging
 import os
@@ -26,7 +24,8 @@ def lookup_and_print(db, ip, dt):
     else:
         # XXX: UltraJSON (ujson) does not support pretty printing, so
         # use built-in JSON module instead.
-        print(json.dumps(json.loads(value), indent=2, sort_keys=True))
+        parsed = json.loads(value.decode('UTF-8'))
+        print(json.dumps(parsed, indent=2, sort_keys=True))
 
 
 app = aaargh.App(description="Fast IP geo lookup")
@@ -34,7 +33,7 @@ app.arg('--db', default='db', dest='db_dir')
 
 
 @app.cmd(name='load', help="Load data")
-@app.cmd_arg('inputs', type=file, nargs='+')
+@app.cmd_arg('inputs', type=argparse.FileType('r'), nargs='+')
 def load_data(db_dir, inputs):
 
     logger.info(
@@ -74,7 +73,7 @@ def shell(db_dir, dt):
 @app.cmd(name='perftest', help="Run performance test")
 @app.cmd_arg('--iterations', '-n', default=100 * 1000, type=int,
              help="The number of iterations")
-@app.cmd_arg('--test-set', type=file)
+@app.cmd_arg('--test-set', type=argparse.FileType('r'))
 @app.cmd_arg('--datetime', '--dt', dest='dt')
 def perftest(db_dir, iterations, test_set, dt):
     db = Database(db_dir)
@@ -82,8 +81,8 @@ def perftest(db_dir, iterations, test_set, dt):
 
     if test_set:
         logger.info("Using test set %r", test_set.name)
-        it = itertools.imap(str.strip, test_set)
-        it = itertools.imap(socket.inet_aton, it)
+        it = map(str.strip, test_set)
+        it = map(socket.inet_aton, it)
     else:
         logger.info("Running %d iterations with random IP addresses",
                     iterations)

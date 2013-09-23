@@ -1,7 +1,7 @@
 
 import heapq
 import itertools
-from itertools import groupby, imap
+from itertools import groupby
 import operator
 import socket
 import struct
@@ -133,13 +133,13 @@ def dict_diff(d, base):
     # ...but the loop below is more performant for dicts with more than
     # a few keys.
     to_set = {}
-    for k, v in d.iteritems():
+    for k, v in d.items():
         if not k in base:
             to_set[k] = d[k]  # addition
         elif base[k] != v:
             to_set[k] = v  # mutation
 
-    to_delete = tuple(base.viewkeys() - d.viewkeys())
+    to_delete = tuple(base.keys() - d.keys())
     return to_set, to_delete
 
 
@@ -197,7 +197,7 @@ def squash_duplicate_dicts(
     # Note: the grouper is a generator (lazy), so explicitly turn the
     # result into a list, as the dicts will be modified inside the loop
     # below. Not doing so breaks the comparison inside the grouper.
-    squashed = list(imap(next, imap(_ig1, groupby(transformed, _ig1))))
+    squashed = list(map(next, map(_ig1, groupby(transformed, _ig1))))
 
     # Step 3: transform to original format. Add back the ignored key to obtain
     # dicts in the original format.
