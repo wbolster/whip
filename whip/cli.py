@@ -1,6 +1,7 @@
 
 import argparse
 import gzip
+import io
 import json
 import logging
 import os
@@ -40,7 +41,7 @@ app.arg('--db', default='db', dest='db_dir')
 
 
 @app.cmd(name='load', help="Load data")
-@app.cmd_arg('inputs', type=argparse.FileType('r'), nargs='+')
+@app.cmd_arg('inputs', type=argparse.FileType('rb'), nargs='+')
 def load_data(db_dir, inputs):
 
     logger.info(
@@ -49,14 +50,14 @@ def load_data(db_dir, inputs):
 
     def gzip_wrap(fp):
         if fp.name.endswith('.gz'):
-            return gzip.GzipFile(mode='r', fileobj=fp)
+            return gzip.open(fp, mode='rt', encoding='UTF-8')
         else:
-            return fp
+            return io.TextIOWrapper(fp, encoding='UTF-8')
 
     inputs = map(gzip_wrap, inputs)
     iters = map(iter_json, inputs)
     db = Database(db_dir, create_if_missing=True)
-    db.load(*iters)
+    db.load(*list(iters))
 
 
 @app.cmd(name="lookup")
