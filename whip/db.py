@@ -49,7 +49,9 @@ from whip.util import (
 logger = logging.getLogger(__name__)
 
 DATETIME_GETTER = operator.itemgetter('datetime')
-SIZE_STRUCT = struct.Struct('>H')
+uint8_pack = struct.Struct('>B').pack
+uint16_pack = struct.Struct('>H').pack
+uint16_unpack = struct.Struct('>H').unpack
 
 
 def _debug_format_infoset(d):
@@ -70,7 +72,7 @@ def build_record(begin_ip_int, end_ip_int, infosets):
     # The most recent infoset is stored in full
     latest = unique_infosets[-1]
     latest_datetime = latest['datetime'].encode('ascii')
-    latest_json = dumps(latest)
+    latest_json = dumps(latest, ensure_ascii=False).encode('UTF-8')
 
     # Older infosets are stored in a history structure with (reverse)
     # diffs for each pair. This saves a lot of storage space, but
@@ -81,16 +83,16 @@ def build_record(begin_ip_int, end_ip_int, infosets):
     # (slower) without any decoding (faster). The former works better in
     # practice, especially when data sizes grow.
     history = dict_diff_decremental(unique_infosets)
-    history_json = dumps(history)
+    history_json = dumps(history, ensure_ascii=False).encode('UTF-8')
 
     # Build the actual key and value byte strings.
     # XXX: String concatenation seems faster than the''.join((..., ...))
     # alternative on 64-bit CPython 2.7.5.
     key = ipv4_int_to_bytes(end_ip_int)
     value = (ipv4_int_to_bytes(begin_ip_int)
-             + SIZE_STRUCT.pack(len(latest_json))
+             + uint16_pack(len(latest_json))
              + latest_json
-             + chr(len(latest_datetime))
+             + uint8_pack(len(latest_datetime))
              + latest_datetime
              + history_json)
     return key, value
@@ -168,7 +170,7 @@ class Database(object):
         # The next 2 bytes indicate the length of the JSON string for
         # the most recent information
         offset = 4
-        (json_size,) = SIZE_STRUCT.unpack(value[offset:offset + 2])
+        (json_size,) = uint16_unpack(value[offset:offset + 2])
         offset += 2
         infoset_json = value[offset:offset + json_size]
 
