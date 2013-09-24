@@ -66,7 +66,7 @@ def lookup(ips, db_dir, dt):
 def shell(db_dir, dt):
     db = Database(db_dir)
     while True:
-        ip = raw_input('IP: ')
+        ip = input('IP: ')
         lookup_and_print(db, ip, dt)
 
 
@@ -88,7 +88,7 @@ def perftest(db_dir, iterations, test_set, dt):
                     iterations)
         # Use a sliding window over random data to obtain 4 bytes at a time
         rand_bytes = os.urandom(iterations + size - 1)
-        it = (rand_bytes[n:n + size] for n in xrange(iterations))
+        it = (rand_bytes[n:n + size] for n in range(iterations))
 
     lookup = db.lookup
     start_time = time.time()
