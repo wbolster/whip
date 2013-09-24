@@ -65,9 +65,12 @@ def lookup(ips, db_dir, dt):
 @app.cmd_arg('--datetime', '--dt', dest='dt')
 def shell(db_dir, dt):
     db = Database(db_dir)
-    while True:
-        ip = input('IP: ')
-        lookup_and_print(db, ip, dt)
+    try:
+        while True:
+            ip = input('IP: ')
+            lookup_and_print(db, ip, dt)
+    except EOFError:
+        pass
 
 
 @app.cmd(name='perftest', help="Run performance test")
