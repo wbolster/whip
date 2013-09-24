@@ -51,6 +51,11 @@ Ideas / TODO
   keeping the index in memory only requires 100MB of RAM, and lookups would only
   issue `db.get()` for keys that are known to exist.
 
+  Update: experiments on a big database containing most IP ranges in use show
+  this is *not* any faster than doing the actual seek, since `it.seek()` takes
+  just as long as `db.get()`. This means a lot of memory will be used to improve
+  performance for non-hits (in which case no DB calls are made).
+
 * Try out LMDB instead of LevelDB
 
 * Support for adding new data to an existing database. Currently Whip only
