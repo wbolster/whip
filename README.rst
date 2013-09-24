@@ -36,3 +36,22 @@ Dependencies
 * *Flask* for the REST API
 * *Aaargh* for the command line tool
 * *UltraJSON (*ujson*) for fast JSON encoding and decoding
+
+
+Ideas / TODO
+============
+
+* Perform range scan on in-memory structure instead seeking on a DB iterator.
+  This means Whip must load all keys in memory on startup (in an `array.array`);
+  use `bisect.bisect_right` to find the right entry, then simply `db.get()` for
+  the actual value. To avoid scanning the complete database on startup, the
+  keyspace should be split using a key prefix: one part keeps both the keys and
+  values (full database), the other part only keeps the keys. The latter will be
+  scanned and loaded into memory upon startup. For ~25000000 IPv4 addresses,
+  keeping the index in memory only requires 100MB of RAM, and lookups would only
+  issue `db.get()` for keys that are known to exist.
+
+* Try out LMDB instead of LevelDB
+
+* Support for adding new data to an existing database. Currently Whip only
+  supports complete bulk imports.
