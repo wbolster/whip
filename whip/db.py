@@ -56,7 +56,7 @@ uint16_unpack = struct.Struct('>H').unpack
 
 def _debug_format_infoset(d):
     return ', '.join('%s=%s' % (k[:1], v or '')
-                     for k, v in sorted(d.iteritems()))
+                     for k, v in sorted(d.items()))
 
 
 def build_record(begin_ip_int, end_ip_int, infosets):
