@@ -117,29 +117,16 @@ def dict_diff(d, base):
     """
     Calculate differences between a dict and a base dict.
 
-    The return value is a tuple with two items: a `to_set` dictionary
-    with all items in `d` that were either unset or changed, and
-    a `to_delete` tuple with all removed keys.
+    The return value is a 2-tuple containing a dict of items in `d` that
+    were either added or modified and a list with removed keys.
 
     Note: this function does not recursively compare dicts; only the
     keys and values in the supplied dicts will be compared.
 
     See also dict_patch().
     """
-    # The loop below is equivalent to
-    #
-    #   to_set = dict(d.items() - base.items())
-    #
-    # ...but the loop below is more performant for dicts with more than
-    # a few keys.
-    to_set = {}
-    for k, v in d.items():
-        if not k in base:
-            to_set[k] = v  # addition
-        elif base[k] != v:
-            to_set[k] = v  # mutation
-
-    to_delete = tuple(base.keys() - d.keys())
+    to_set = {k: v for k, v in d.items() if k not in base or base[k] != v}
+    to_delete = [k for k in base if k not in d]
     return to_set, to_delete
 
 
