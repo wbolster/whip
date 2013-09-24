@@ -1,6 +1,6 @@
-.PHONY: test pylint
+.PHONY: test pylint flake8
 
-all: test pylint
+all: test pylint flake8
 
 test:
 	nosetests --verbose --with-coverage
@@ -16,3 +16,6 @@ pylint:
 		--disable=star-args \
 		--disable=too-few-public-methods \
 		whip
+
+flake8:
+	-flake8 whip
