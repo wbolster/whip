@@ -18,14 +18,21 @@ logger = logging.getLogger(__name__)
 
 
 def lookup_and_print(db, ip, dt):
-    value = db.lookup(socket.inet_aton(ip), dt)
+    try:
+        key = socket.inet_aton(ip)
+    except OSError:
+        print("Invalid IP address")
+        return
+
+    value = db.lookup(key, dt)
     if value is None:
         print("No hit found")
-    else:
-        # XXX: UltraJSON (ujson) does not support pretty printing, so
-        # use built-in JSON module instead.
-        parsed = json.loads(value.decode('UTF-8'))
-        print(json.dumps(parsed, indent=2, sort_keys=True))
+        return
+
+    # XXX: UltraJSON (ujson) does not support pretty printing, so
+    # use built-in JSON module instead.
+    parsed = json.loads(value.decode('UTF-8'))
+    print(json.dumps(parsed, indent=2, sort_keys=True))
 
 
 app = aaargh.App(description="Fast IP geo lookup")
