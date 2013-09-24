@@ -1,5 +1,4 @@
 aaargh
 Flask
-nose
 plyvel
 ujson
