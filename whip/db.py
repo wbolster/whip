@@ -55,6 +55,7 @@ uint16_unpack = struct.Struct('>H').unpack
 
 
 def _debug_format_infoset(d):
+    """Formatting function for debugging purposes"""
     return ', '.join('%s=%s' % (k[:1], v or '')
                      for k, v in sorted(d.items()))
 
@@ -99,6 +100,10 @@ def build_record(begin_ip_int, end_ip_int, infosets):
 
 
 class Database(object):
+    """
+    Database access class for loading and looking up data.
+    """
+
     def __init__(self, database_dir, create_if_missing=False):
         logger.debug("Opening database %s", database_dir)
         self.db = plyvel.DB(
@@ -107,9 +112,10 @@ class Database(object):
             write_buffer_size=16 * 1024 * 1024,
             max_open_files=512,
             lru_cache_size=128 * 1024 * 1024)
-        self._make_iter()
+        self.iter = None
+        self._refresh_iter()
 
-    def _make_iter(self):
+    def _refresh_iter(self):
         """Make an iterator for the current database.
 
         Iterator construction is relatively costly, so reuse it for
@@ -131,6 +137,7 @@ class Database(object):
             n, ipv4_int_to_str(item[0])))
 
         n = 0
+        item = None  # this makes pylint happy
         for n, item in enumerate(merged, 1):
             key, value = build_record(*item)
             self.db.put(key, value)
@@ -143,7 +150,7 @@ class Database(object):
             reporter.tick(True)
 
         # Refresh iterator so that it sees the new data
-        self._make_iter()
+        self._refresh_iter()
 
     def lookup(self, ip, dt=None):
         """Lookup a single IP address in the database

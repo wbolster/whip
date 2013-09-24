@@ -6,7 +6,7 @@ test:
 	nosetests --verbose --with-coverage
 
 pylint:
-	-pylint \
+	@-pylint \
 		--report=no \
 		--msg-template='{path}:{line}:{column} [{msg_id}/{symbol}] {msg}' \
 		--disable=bad-builtin \
@@ -18,4 +18,4 @@ pylint:
 		whip
 
 flake8:
-	-flake8 whip
+	@-flake8 whip

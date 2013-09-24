@@ -1,4 +1,8 @@
-#!/usr/bin/env python
+"""
+Whip's REST API
+"""
+
+# pylint: disable=missing-docstring
 
 import socket
 
@@ -15,7 +19,7 @@ db = None
 
 @app.before_first_request
 def _open_db():
-    global db
+    global db  # pylint: disable=global-statement
     db = Database(app.config['DATABASE_DIR'])
 
 

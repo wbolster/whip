@@ -1,3 +1,6 @@
+"""
+Whip utility module.
+"""
 
 import heapq
 import itertools
@@ -72,14 +75,15 @@ def merge_ranges(*inputs):
     iterates over it, yielding a snapshot at each change point.
     """
 
-    def generate_changes(it, input_id):
+    def generate_change_events(it, input_id):
+        """Generate start/stop "edges" for an iterable"""
         for begin, end, data in it:
             assert begin <= end
             yield begin, EVENT_TYPE_BEGIN, input_id, data
             yield end + 1, EVENT_TYPE_END, input_id, None
 
     changes_generators = [
-        generate_changes(input, input_id)
+        generate_change_events(input, input_id)
         for input_id, input in enumerate(inputs)
     ]
     all_changes = heapq.merge(*changes_generators)
@@ -207,6 +211,14 @@ DEFAULT_CALLBACK_INTERVAL = 10
 
 
 class PeriodicCallback(object):
+    """
+    Periodic callback ticker, useful for logging progress information.
+
+    This class doesn't do anything but keeping a simple timer and
+    a threshold. It's up to the calling code to call `tick()` everytime
+    it may want the callback to be run.
+    """
+
     def __init__(self, cb, interval=DEFAULT_CALLBACK_INTERVAL):
         assert callable(cb)
         self._cb = cb
@@ -214,6 +226,12 @@ class PeriodicCallback(object):
         self._last_report = float('-inf')
 
     def tick(self, force_report=False):
+        """
+        Ping this periodic callback instance.
+
+        The callback function will be called if if enough time has
+        elapsed.
+        """
         if force_report or time.time() - self._last_report > self._interval:
             self._cb()
             self._last_report = time.time()
