@@ -1,3 +1,8 @@
+"""
+Whip command line interface module.
+"""
+
+# pylint: disable=missing-docstring
 
 import argparse
 import gzip
@@ -101,10 +106,11 @@ def perftest(db_dir, iterations, test_set, dt):
         rand_bytes = os.urandom(iterations + size - 1)
         it = (rand_bytes[n:n + size] for n in range(iterations))
 
-    lookup = db.lookup
+    _lookup = db.lookup
     start_time = time.time()
+    n = 0
     for n, ip in enumerate(it, 1):
-        lookup(ip, dt)
+        _lookup(ip, dt)
 
     elapsed = time.time() - start_time
     out = "{:d} lookups in {:.2f}s ({:.2f} req/s)".format(
