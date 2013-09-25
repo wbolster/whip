@@ -88,15 +88,15 @@ def build_record(begin_ip_int, end_ip_int, infosets):
     history_json = dumps(history, ensure_ascii=False).encode('UTF-8')
 
     # Build the actual key and value byte strings.
-    # XXX: String concatenation seems faster than the''.join((..., ...))
-    # alternative on 64-bit CPython 2.7.5.
     key = ipv4_int_to_bytes(end_ip_int)
-    value = (ipv4_int_to_bytes(begin_ip_int)
-             + uint16_pack(len(latest_json))
-             + latest_json
-             + uint8_pack(len(latest_datetime))
-             + latest_datetime
-             + history_json)
+    value = b''.join((
+        ipv4_int_to_bytes(begin_ip_int),
+        uint16_pack(len(latest_json)),
+        latest_json,
+        uint8_pack(len(latest_datetime)),
+        latest_datetime,
+        history_json,
+    ))
     return key, value
 
 
