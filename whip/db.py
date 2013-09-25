@@ -113,17 +113,6 @@ class Database(object):
             max_open_files=512,
             lru_cache_size=128 * 1024 * 1024)
         self.iter = None
-        self._refresh_iter()
-
-    def _refresh_iter(self):
-        """Make an iterator for the current database.
-
-        Iterator construction is relatively costly, so reuse it for
-        performance reasons. The iterator won't see any data written
-        after its construction, but this is not a problem since the data
-        set is static.
-        """
-        self.iter = self.db.iterator(include_key=False)
 
     def load(self, *iters):
         """Load data from importer iterables"""
@@ -149,8 +138,8 @@ class Database(object):
         if n > 0:
             reporter.tick(True)
 
-        # Refresh iterator so that it sees the new data
-        self._refresh_iter()
+        # Force lookups to use a new iterator so new data is seen.
+        self.iter = None
 
     def lookup(self, ip, dt=None):
         """Lookup a single IP address in the database
@@ -158,6 +147,13 @@ class Database(object):
         This either returns the stored information, or `None` if no
         information was found.
         """
+
+        # Iterator construction is relatively costly, so reuse it for
+        # performance reasons. The iterator won't see any data written
+        # after its construction, but that is not a problem since the
+        # data set is static.
+        if self.iter is None:
+            self.iter = self.db.iterator(include_key=False)
 
         # The database key stores the end IP of all ranges, so a simple
         # seek positions the iterator at the right key (if found).
