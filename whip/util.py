@@ -4,7 +4,6 @@ Whip utility module.
 
 import heapq
 import itertools
-from itertools import groupby
 import operator
 import socket
 import struct
@@ -161,9 +160,7 @@ def dict_diff_decremental(dicts):
     ]
 
 
-def squash_duplicate_dicts(
-        dicts, ignored_key=None,
-        _ig1=operator.itemgetter(1), _NOT_SET=object()):
+def squash_duplicate_dicts(dicts, ignored_key=None):
     """Deduplicate a list of dicts by squashing adjacent identical dicts.
 
     This functions takes a list of dicts and returns only the first dict
@@ -176,8 +173,9 @@ def squash_duplicate_dicts(
     # Step 1: preparation. Pop (and remember) the key to ignore, but
     # first copy the dicts (instances are "borrowed"), so that we can
     # safely mutate them.
+    _missing_value = object()  # unique object
     dicts = [d.copy() for d in dicts]
-    transformed = [(d.pop(ignored_key, _NOT_SET), d) for d in dicts]
+    transformed = [(d.pop(ignored_key, _missing_value), d) for d in dicts]
 
     # Step 2: deduplication. Group identical information, keeping only
     # the first occurrence of each unique dict. The implementation is
@@ -188,14 +186,15 @@ def squash_duplicate_dicts(
     # Note: the grouper is a generator (lazy), so explicitly turn the
     # result into a list, as the dicts will be modified inside the loop
     # below. Not doing so breaks the comparison inside the grouper.
-    squashed = list(map(next, map(_ig1, groupby(transformed, _ig1))))
+    grouper = itertools.groupby(transformed, operator.itemgetter(1))
+    squashed = [next(group) for key, group in grouper]
 
     # Step 3: transform to original format. Add back the ignored key to obtain
     # dicts in the original format.
     uniques = []
     _append = uniques.append
     for ignored_value, d in squashed:
-        if ignored_value is not _NOT_SET:
+        if ignored_value is not _missing_value:
             # Write back previously extracted ignored key/value (if any)
             d[ignored_key] = ignored_value
         _append(d)
