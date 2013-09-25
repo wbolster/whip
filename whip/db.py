@@ -188,10 +188,10 @@ class Database(object):
         # This is a lookup for a specific timestamp. The most recent
         # version may be the one asked for.
         offset += json_size
-        latest_datetime_size = ord(value[offset])
+        latest_datetime_size = value[offset]  # gives an int
         offset += 1
         latest_datetime = value[offset:offset + latest_datetime_size]
-        if latest_datetime <= dt:
+        if latest_datetime <= dt.encode('ascii'):
             return infoset_json
 
         offset += latest_datetime_size
