@@ -1,4 +1,6 @@
-.PHONY: test pylint flake8
+.PHONY: all test pylint flake8
+
+PACKAGES=whip
 
 all: test pylint flake8
 
@@ -6,7 +8,7 @@ test:
 	nosetests --verbose --with-coverage
 
 pylint:
-	@-pylint \
+	-pylint \
 		--report=no \
 		--msg-template='{path}:{line}:{column} [{msg_id}/{symbol}] {msg}' \
 		--disable=bad-builtin \
@@ -15,7 +17,7 @@ pylint:
 		--disable=locally-disabled \
 		--disable=star-args \
 		--disable=too-few-public-methods \
-		whip
+		${PACKAGES}
 
 flake8:
-	@-flake8 whip
+	-flake8 ${PACKAGES}
