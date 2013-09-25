@@ -16,8 +16,8 @@ import time
 
 import aaargh
 
-from whip.db import Database
-from whip.reader import iter_json
+from .db import Database
+from .reader import iter_json
 
 
 logger = logging.getLogger(__name__)
@@ -123,7 +123,7 @@ def perftest(db_dir, iterations, test_set, dt):
 @app.cmd_arg('--host', default='0')
 @app.cmd_arg('--port', type=int, default=5555)
 def serve(host, port, db_dir):
-    from whip.web import app as application
+    from .web import app as application
     application.config['DATABASE_DIR'] = db_dir
     application.run(host=host, port=port)
 

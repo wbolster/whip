@@ -35,8 +35,8 @@ import struct
 
 import plyvel
 
-from whip.json import dumps, loads
-from whip.util import (
+from .json import dumps, loads
+from .util import (
     dict_diff_decremental,
     dict_patch,
     ipv4_int_to_bytes,

@@ -8,7 +8,7 @@ import socket
 
 from flask import Flask, abort, make_response, request
 
-from whip.db import Database
+from .db import Database
 
 app = Flask(__name__)
 app.config.from_envvar('WHIP_SETTINGS', silent=True)

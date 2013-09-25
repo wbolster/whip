@@ -2,8 +2,8 @@
 Whip reader module.
 """
 
-from whip.json import loads
-from whip.util import ipv4_str_to_int
+from .json import loads
+from .util import ipv4_str_to_int
 
 DEFAULT_RANGE_FIELDS = ('begin', 'end')
 
