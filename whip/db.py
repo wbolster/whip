@@ -28,6 +28,7 @@ database. The key/value layout is as follows:
 
 """
 
+import functools
 import logging
 import operator
 import struct
@@ -141,6 +142,7 @@ class Database(object):
         # Force lookups to use a new iterator so new data is seen.
         self.iter = None
 
+    @functools.lru_cache(128 * 1024)
     def lookup(self, ip, dt=None):
         """Lookup a single IP address in the database
 

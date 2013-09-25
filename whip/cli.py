@@ -116,6 +116,7 @@ def perftest(db_dir, iterations, test_set, dt):
     out = "{:d} lookups in {:.2f}s ({:.2f} req/s)".format(
         n, elapsed, n / elapsed)
     print(out)
+    print(_lookup.cache_info())
 
 
 @app.cmd
