@@ -35,8 +35,8 @@ def lookup_and_print(db, ip, dt):
         print("No hit found")
         return
 
-    # XXX: UltraJSON (ujson) does not support pretty printing, so
-    # use built-in JSON module instead.
+    # Note: UltraJSON (ujson) does not support pretty printing, so use
+    # built-in JSON module instead.
     parsed = json.loads(value.decode('UTF-8'))
     print(json.dumps(parsed, indent=2, sort_keys=True))
 
