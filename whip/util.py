@@ -74,6 +74,12 @@ def merge_ranges(*inputs):
     iterates over it, yielding a snapshot at each change point.
     """
 
+    # Shortcut in case there is only a single input iterable
+    if len(inputs) == 1:
+        for begin, end, data in inputs[0]:
+            yield begin, end, [data]
+        return
+
     def generate_change_events(it, input_id):
         """Generate start/stop "edges" for an iterable"""
         for begin, end, data in it:

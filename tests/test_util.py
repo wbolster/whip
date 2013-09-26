@@ -37,6 +37,23 @@ def test_ipv4_conversion():
 
 def test_merge_ranges():
 
+    # Single input
+    input = [
+        (0, 1, 'a1'),
+        (4, 4, 'a2'),
+        (6, 6, 'a3'),
+        (17, 20, 'a4'),
+    ]
+    expected = [
+        (0, 1, ['a1']),
+        (4, 4, ['a2']),
+        (6, 6, ['a3']),
+        (17, 20, ['a4']),
+    ]
+    actual = list(merge_ranges(input))
+    assert_list_equal(actual, expected)
+
+    # Multiple inputs:
     #
     # position   00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20
     #            ==============================================================
