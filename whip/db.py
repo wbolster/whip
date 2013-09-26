@@ -124,17 +124,16 @@ class Database(object):
 
         reporter = PeriodicCallback(lambda: logger.info(
             "%d database records stored; current position: %s",
-            n, ipv4_int_to_str(item[0])))
+            n, ipv4_int_to_str(begin_ip_int)))  # pylint: disable=W0631
 
         n = 0
-        item = None  # this makes pylint happy
-        for n, item in enumerate(merged, 1):
-            key, value = build_record(*item)
-            self.db.put(key, value)
-
-            # Tick once in a while
-            if n % 100 == 0:
+        for begin_ip_int, end_ip_int, infosets in merged:
+            n += 1
+            if n % 100 == 1:
                 reporter.tick()
+
+            key, value = build_record(begin_ip_int, end_ip_int, infosets)
+            self.db.put(key, value)
 
         if n > 0:
             reporter.tick(True)
