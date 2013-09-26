@@ -17,25 +17,32 @@ database. The key/value layout is as follows:
   When querying for older versions, the original data is reconstructed
   on-demand.
 
-  The value is packed as follows:
+  The value is a 4-tuple packed using Msgpack like this:
 
   * IPv4 begin address (4 bytes)
-  * Length of the JSON data for the most recent information (2 bytes)
   * JSON encoded data for the latest version (variable length)
-  * Length of the latest datetime string (1 byte)
-  * Latest datetime as string
-  * JSON encoded diffs for older versions (variable length, until end)
+  * Latest datetime
+  * Msgpack encoded diffs for older versions (yes, Msgpack in Msgpack,
+    since this nested structure is not always needed and lets us decode
+    it explicitly)
 
+Note the odd mix of JSON and Msgpack encoding. Encoding/decoding speeds
+are comparable (when using ujson), but Msgpack uses less space and hence
+makes LevelDB faster, so that is the preferred format. The one exception
+is the 'latest version' data, which is encoded using JSON, since that
+saves a complete decode/encode (from Msgpack to JSON) roundtrip when
+executing queries asking for the most recent version.
 """
 
 import functools
 import logging
 import operator
-import struct
 
+import msgpack
+from msgpack import loads as msgpack_loads
 import plyvel
 
-from .json import dumps, loads
+from .json import dumps as json_dumps, loads as json_loads
 from .util import (
     dict_diff_decremental,
     dict_patch,
@@ -48,11 +55,10 @@ from .util import (
 
 
 logger = logging.getLogger(__name__)
+msgpack_dumps = msgpack.Packer().pack  # faster than calling .packb()
+msgpack_dumps_utf8 = msgpack.Packer(encoding='UTF-8').pack  # idem
 
 DATETIME_GETTER = operator.itemgetter('datetime')
-uint8_pack = struct.Struct('>B').pack
-uint16_pack = struct.Struct('>H').pack
-uint16_unpack = struct.Struct('>H').unpack
 
 
 def _debug_format_infoset(d):
@@ -71,31 +77,24 @@ def build_record(begin_ip_int, end_ip_int, infosets):
     infosets.sort(key=DATETIME_GETTER)
     unique_infosets = squash_duplicate_dicts(infosets, ignored_key='datetime')
 
-    # The most recent infoset is stored in full
-    latest = unique_infosets[-1]
-    latest_datetime = latest['datetime'].encode('ascii')
-    latest_json = dumps(latest, ensure_ascii=False).encode('UTF-8')
-
-    # Older infosets are stored in a history structure with (reverse)
-    # diffs for each pair. This saves a lot of storage space, but
-    # requires "patching" during lookups. Since the storage layer is
-    # faster when working with smaller values, this is a trade-off
-    # between storage size and retrieval speed: either store less data
-    # (faster) and decode it when querying (slower), or store more data
-    # (slower) without any decoding (faster). The former works better in
+    # The most recent infoset is stored in full, while older infosets are
+    # stored in a history structure with (reverse) diffs for each pair. This
+    # saves a lot of storage space, but requires "patching" during lookups.
+    # Since the storage layer is faster when working with smaller values, this
+    # is a trade-off between storage size and retrieval speed: either store
+    # less data (faster) and decode it when querying (slower), or store more
+    # data (slower) without any decoding (faster). The former works better in
     # practice, especially when data sizes grow.
+    latest = unique_infosets[-1]
     history = dict_diff_decremental(unique_infosets)
-    history_json = dumps(history, ensure_ascii=False).encode('UTF-8')
 
     # Build the actual key and value byte strings.
     key = ipv4_int_to_bytes(end_ip_int)
-    value = b''.join((
+    value = msgpack_dumps((
         ipv4_int_to_bytes(begin_ip_int),
-        uint16_pack(len(latest_json)),
-        latest_json,
-        uint8_pack(len(latest_datetime)),
-        latest_datetime,
-        history_json,
+        json_dumps(latest, ensure_ascii=False).encode('UTF-8'),
+        latest['datetime'].encode('ascii'),
+        msgpack_dumps_utf8(history),
     ))
     return key, value
 
@@ -165,43 +164,34 @@ class Database(object):
             # Past any range in the database: no hit
             return None
 
-        # Check range boundaries. The first 4 bytes store the begin IP.
-        # If the IP currently being looked up is in a gap, there is no
-        # hit after all.
-        if ip < value[:4]:
-            return None
+        # Decode the value
+        value = msgpack_loads(value, use_list=False)
+        begin_ip, latest_json, latest_datetime, history_msgpack = value
 
-        # The next 2 bytes indicate the length of the JSON string for
-        # the most recent information
-        offset = 4
-        (json_size,) = uint16_unpack(value[offset:offset + 2])
-        offset += 2
-        infoset_json = value[offset:offset + json_size]
+        # Check range boundaries. If the IP currently being looked up is
+        # in a gap, there is no hit after all.
+        if ip < begin_ip:
+            return None
 
         # If the lookup is for the most recent version, we're done.
         if dt is None:
-            return infoset_json
+            return latest_json
 
         # This is a lookup for a specific timestamp. The most recent
         # version may be the one asked for.
-        offset += json_size
-        latest_datetime_size = value[offset]  # gives an int
-        offset += 1
-        latest_datetime = value[offset:offset + latest_datetime_size]
         if latest_datetime <= dt.encode('ascii'):
-            return infoset_json
-
-        offset += latest_datetime_size
+            return latest_json
 
         # Too bad, we need to delve deeper into history. Decode JSON,
         # iteratively apply patches, and re-encode to JSON again.
-        infoset = loads(infoset_json)
-        history = loads(value[offset:])
+        infoset = json_loads(latest_json)
+        history = msgpack_loads(
+            history_msgpack, use_list=False, encoding='UTF-8')
         for to_delete, to_set in history:
             dict_patch(infoset, to_delete, to_set)
             if infoset['datetime'] <= dt:
                 # Finally found it; encode and return the result.
-                return dumps(infoset)
+                return json_dumps(infoset, ensure_ascii=False).encode('UTF-8')
 
         # Too bad, no result
         return None
