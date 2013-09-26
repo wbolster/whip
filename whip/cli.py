@@ -97,8 +97,7 @@ def perftest(db_dir, iterations, test_set, dt):
 
     if test_set:
         logger.info("Using test set %r", test_set.name)
-        it = map(str.strip, test_set)
-        it = map(socket.inet_aton, it)
+        it = (socket.inet_aton(line.strip()) for line in test_set)
     else:
         logger.info("Running %d iterations with random IP addresses",
                     iterations)
@@ -116,7 +115,7 @@ def perftest(db_dir, iterations, test_set, dt):
     out = "{:d} lookups in {:.2f}s ({:.2f} req/s)".format(
         n, elapsed, n / elapsed)
     print(out)
-    print(_lookup.cache_info())
+    print('Cache statistics:', _lookup.cache_info())
 
 
 @app.cmd
