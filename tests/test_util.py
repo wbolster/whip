@@ -9,7 +9,9 @@ from nose.tools import (
 
 from whip.util import (
     dict_diff,
+    dict_diff_incremental,
     dict_patch,
+    dict_patch_incremental,
     ipv4_bytes_to_int,
     ipv4_int_to_bytes,
     ipv4_int_to_str,
@@ -126,6 +128,23 @@ def test_dict_patching():
         recreated = base.copy()
         dict_patch(recreated, to_set, to_delete)
         assert_dict_equal(original, recreated)
+
+
+def test_incremental_patching():
+    inputs = [
+        dict(a=1, b=1, c=1),
+        dict(a=2, b=2),
+        dict(a=3, b=3, c=3),
+        dict(a=4, b=3, c=3),
+    ]
+    base, patches = dict_diff_incremental(inputs)
+    patches = list(patches)
+
+    assert len(patches) == len(inputs) - 1  # n inputs, n-1 diffs
+    assert_dict_equal(base, inputs[0])
+
+    reconstructed = list(dict_patch_incremental(base, patches))
+    assert_list_equal(inputs, [base] + list(reconstructed))
 
 
 def test_squashing():

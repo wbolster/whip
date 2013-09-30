@@ -156,6 +156,43 @@ def dict_diff_decremental(dicts):
     ]
 
 
+def dict_diff_incremental(iterable):
+    """
+    Create incremental diffs for an iterable of dicts.
+
+    The first dict in `iterable` (which must yield at least one dict)
+    will be used as the base dict, and subsequent dicts will be returned
+    as incremental patches. These incremental patches can be used to
+    reconstruct the original dicts by incrementally applying those
+    patches to the base dict (and its patched versions).
+
+    This function returns a 2-tuple containing the base dict and
+    a generator that yields incremental patches.
+
+    Example: for the input `[d1, d2, d3, d4]`, this function returns the
+    2-tuple `(d1, <patches-generator>)`; the generator yields 3 patches:
+    `<diff from d1 to d2>, <diff from d2 to d3>, <diff from d3 to d4>`.
+    """
+    # This implementation is inspired by the pairwise() recipe from the
+    # itertools documentation.
+    a, b = itertools.tee(iterable)
+    base = next(a)
+    return base, itertools.starmap(dict_diff, zip(a, b))
+
+
+def dict_patch_incremental(base, patches, inplace=False):
+    """Generate patches dicts given a base dict and a series of patches.
+
+    This is the reverse of dict_diff_incremental().
+    """
+    d = base
+    for additions, deletions in patches:
+        if not inplace:
+            d = d.copy()
+        dict_patch(d, additions, deletions)
+        yield d
+
+
 def squash_duplicate_dicts(dicts, ignored_key=None):
     """Deduplicate a list of dicts by squashing adjacent identical dicts.
 
