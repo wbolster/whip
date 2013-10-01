@@ -191,46 +191,14 @@ def dict_patch_incremental(d, patches, *, inplace=False):
         yield d
 
 
-def squash_duplicate_dicts(dicts, ignored_key=None):
-    """Deduplicate a list of dicts by squashing adjacent identical dicts.
-
-    This functions takes a list of dicts and returns only the first dict
-    of each "run" of identical dicts, in the original order, i.e.
-    `[d1, d1, d1, d2, d2, d3, d1]` results in `[d1, d2, d3, d1]`.
-
-    The `ignored_key` arg specifies a key to ignore when comparing the
-    dict (which uses a normal `d1 == d2` equality test).
+def unique_justseen(iterable, key=None):
     """
-    # Step 1: preparation. Pop (and remember) the key to ignore, but
-    # first copy the dicts (instances are "borrowed"), so that we can
-    # safely mutate them.
-    _missing_value = object()  # unique object
-    dicts = [d.copy() for d in dicts]
-    transformed = [(d.pop(ignored_key, _missing_value), d) for d in dicts]
+    List unique elements, preserving order.
 
-    # Step 2: deduplication. Group identical information, keeping only
-    # the first occurrence of each unique dict. The implementation is
-    # based on the unique_justseen() recipe from the itertools docs:
-    # group by actual value and take only the first item of each
-    # group.
-    #
-    # Note: the grouper is a generator (lazy), so explicitly turn the
-    # result into a list, as the dicts will be modified inside the loop
-    # below. Not doing so breaks the comparison inside the grouper.
-    grouper = itertools.groupby(transformed, operator.itemgetter(1))
-    squashed = [next(group) for key, group in grouper]
-
-    # Step 3: transform to original format. Add back the ignored key to obtain
-    # dicts in the original format.
-    uniques = []
-    _append = uniques.append
-    for ignored_value, d in squashed:
-        if ignored_value is not _missing_value:
-            # Write back previously extracted ignored key/value (if any)
-            d[ignored_key] = ignored_value
-        _append(d)
-
-    return uniques
+    This is a copy/paste from a recipe in the itertools docs.
+    """
+    return map(next, map(operator.itemgetter(1),
+                         itertools.groupby(iterable, key)))
 
 
 #

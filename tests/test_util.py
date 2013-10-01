@@ -1,6 +1,4 @@
 
-from operator import itemgetter
-
 from nose.tools import (
     assert_dict_equal,
     assert_equal,
@@ -17,7 +15,6 @@ from whip.util import (
     ipv4_int_to_str,
     ipv4_str_to_int,
     merge_ranges,
-    squash_duplicate_dicts,
 )
 
 
@@ -144,43 +141,3 @@ def test_incremental_patching():
 
     reconstructed = list(dict_patch_incremental(base, patches))
     assert_list_equal(inputs, [base] + list(reconstructed))
-
-
-def test_squashing():
-
-    inputs = [
-
-        # First group of identical info
-        dict(a=1, datetime=2),
-        dict(a=1, datetime=3),
-        # no datetime=4 here
-        dict(a=1, datetime=5),
-        dict(a=1, datetime=6),
-        dict(a=1, datetime=7),
-
-        # Second group of identical info
-        dict(a=2, datetime=8),
-        dict(a=2, datetime=9),
-        dict(a=2, datetime=10),
-        dict(a=2, datetime=11),
-        dict(a=2, datetime=12),
-        dict(a=2, datetime=13),
-
-        # Oldest information
-        dict(a=0, datetime=1),
-
-        # Other info, datetime in between
-        dict(a=3, datetime=4)
-    ]
-
-    inputs.sort(key=itemgetter('datetime'))
-    squashed = squash_duplicate_dicts(inputs, ignored_key='datetime')
-
-    expected = [
-        dict(a=0, datetime=1),
-        dict(a=1, datetime=2),
-        dict(a=3, datetime=4),
-        dict(a=1, datetime=5),
-        dict(a=2, datetime=8),
-    ]
-    assert_list_equal(squashed, expected)

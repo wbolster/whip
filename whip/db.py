@@ -50,7 +50,7 @@ from .util import (
     ipv4_int_to_str,
     merge_ranges,
     PeriodicCallback,
-    squash_duplicate_dicts,
+    unique_justseen,
 )
 
 
@@ -67,6 +67,15 @@ def _debug_format_infoset(d):
                      for k, v in sorted(d.items()))
 
 
+def make_squash_key(d):
+    """Dict squashing key function"""
+
+    # Compare all data except for the 'datetime' key
+    d = d.copy()
+    d.pop('datetime')
+    return d
+
+
 def build_record(begin_ip_int, end_ip_int, infosets):
     """Create database records for an iterable of merged infosets."""
 
@@ -75,7 +84,7 @@ def build_record(begin_ip_int, end_ip_int, infosets):
     # Deduplicate. Each infoset will have a different timestamp, so sort
     # chronologically, and ignore the datetime while deduplicating.
     infosets.sort(key=DATETIME_GETTER)
-    unique_infosets = squash_duplicate_dicts(infosets, ignored_key='datetime')
+    unique_infosets = list(unique_justseen(infosets, key=make_squash_key))
 
     # The most recent infoset is stored in full, while older infosets are
     # stored in a history structure with (reverse) diffs for each pair. This
