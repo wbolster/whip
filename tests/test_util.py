@@ -121,12 +121,13 @@ def test_dict_patching():
     ]
 
     for original, expected_to_set, expected_to_delete in inputs:
-        to_set, to_delete = dict_diff(original, base)
+        patch = dict_diff(original, base)
+        to_set, to_delete = patch
         assert_dict_equal(to_set, expected_to_set)
         assert_list_equal(sorted(to_delete), sorted(expected_to_delete))
 
         recreated = base.copy()
-        dict_patch(recreated, to_set, to_delete)
+        dict_patch(recreated, patch)
         assert_dict_equal(original, recreated)
 
 

@@ -129,12 +129,13 @@ def dict_diff(d, base):
     return to_set, to_delete
 
 
-def dict_patch(d, to_set, to_delete):
+def dict_patch(d, patch):
     """
     Patches a dictionary using a changes dict and a list of deletions.
 
     This is the reverse of dict_diff().
     """
+    to_set, to_delete = patch
     d.update(to_set)
     for k in to_delete:
         del d[k]
@@ -170,10 +171,10 @@ def dict_patch_incremental(base, patches, inplace=False):
     This is the reverse of dict_diff_incremental().
     """
     d = base
-    for additions, deletions in patches:
+    for patch in patches:
         if not inplace:
             d = d.copy()
-        dict_patch(d, additions, deletions)
+        dict_patch(d, patch)
         yield d
 
 

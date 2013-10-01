@@ -188,8 +188,8 @@ class Database(object):
         infoset = json_loads(latest_json)
         history = msgpack_loads(
             history_msgpack, use_list=False, encoding='UTF-8')
-        for to_delete, to_set in history:
-            dict_patch(infoset, to_delete, to_set)
+        for patch in history:
+            dict_patch(infoset, patch)
             if infoset['datetime'] <= dt:
                 # Finally found it; encode and return the result.
                 return json_dumps(infoset, ensure_ascii=False).encode('UTF-8')
