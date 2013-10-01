@@ -44,7 +44,7 @@ import plyvel
 
 from .json import dumps as json_dumps, loads as json_loads
 from .util import (
-    dict_diff_decremental,
+    dict_diff_incremental,
     dict_patch,
     ipv4_int_to_bytes,
     ipv4_int_to_str,
@@ -85,8 +85,9 @@ def build_record(begin_ip_int, end_ip_int, infosets):
     # less data (faster) and decode it when querying (slower), or store more
     # data (slower) without any decoding (faster). The former works better in
     # practice, especially when data sizes grow.
-    latest = unique_infosets[-1]
-    history = dict_diff_decremental(unique_infosets)
+    unique_infosets.reverse()
+    latest, history = dict_diff_incremental(unique_infosets)
+    history = list(history)  # consume iterator before serialization
 
     # Build the actual key and value byte strings.
     key = ipv4_int_to_bytes(end_ip_int)

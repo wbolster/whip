@@ -140,22 +140,6 @@ def dict_patch(d, to_set, to_delete):
         del d[k]
 
 
-def dict_diff_decremental(dicts):
-    """Create a list of decremental diffs for a sorted list of dicts.
-
-    The input should be sorted from oldest to latest. The output is in
-    reverse older, i.e. from latest to oldest. This means that the
-    latest version (`dicts[-1]`) is required as the starting point when
-    patching.
-
-    For `n` input dicts, `n - 1` reverse diffs will be returned.
-    """
-    return [
-        dict_diff(dicts[i - 1], dicts[i])
-        for i in range(len(dicts) - 1, 0, -1)
-    ]
-
-
 def dict_diff_incremental(iterable):
     """
     Create incremental diffs for an iterable of dicts.
