@@ -118,9 +118,9 @@ DictPatch = collections.namedtuple(
     ['modifications', 'deletions'])
 
 
-def dict_diff(d, base):
+def dict_diff(d1, d2):
     """
-    Calculate differences between a dict and a base dict.
+    Calculate differences between dicts `d1` and `d2`.
 
     The return value is a `dict patch` structure containing the
     differences.
@@ -130,8 +130,8 @@ def dict_diff(d, base):
     See also dict_patch().
     """
     return DictPatch(
-        {k: v for k, v in d.items() if k not in base or base[k] != v},
-        [k for k in base if k not in d],
+        {k: v for k, v in d2.items() if k not in d1 or d1[k] != v},
+        [k for k in d1 if k not in d2],
     )
 
 
@@ -176,7 +176,7 @@ def dict_diff_incremental(iterable):
     # This implementation is inspired by the pairwise() recipe from the
     # itertools documentation.
     a, b = itertools.tee(iterable)
-    base = next(a)
+    base = next(b)
     return base, itertools.starmap(dict_diff, zip(a, b))
 
 

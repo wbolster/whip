@@ -120,14 +120,13 @@ def test_dict_patching():
          ('c', 'd')),
     ]
 
-    for original, expected_to_set, expected_to_delete in inputs:
-        patch = dict_diff(original, base)
-        to_set, to_delete = patch
-        assert_dict_equal(to_set, expected_to_set)
-        assert_list_equal(sorted(to_delete), sorted(expected_to_delete))
+    for d, expected_modifications, expected_deletions in inputs:
+        patch = dict_diff(base, d)
+        assert_dict_equal(patch.modifications, expected_modifications)
+        assert_list_equal(sorted(patch.deletions), sorted(expected_deletions))
 
         recreated = dict_patch(base, patch)
-        assert_dict_equal(original, recreated)
+        assert_dict_equal(d, recreated)
 
 
 def test_incremental_patching():
