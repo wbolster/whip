@@ -122,11 +122,10 @@ def dict_diff(d, base):
     """
     Calculate differences between a dict and a base dict.
 
-    The return value is an opaque `patch` structure containing the
+    The return value is a `dict patch` structure containing the
     differences.
 
-    Note: this function does not recursively compare dicts; only the
-    keys and values in the supplied dicts will be compared.
+    Note: this function does *not* recursively compare dicts.
 
     See also dict_patch().
     """
@@ -138,18 +137,20 @@ def dict_diff(d, base):
 
 def dict_patch(d, patch, *, inplace=False):
     """
-    Patches a dictionary using a changes dict and a list of deletions.
+    Apply a `dict patch` to a dict.
 
-    If `inplace` is set to `True`, the dict `d` is modified inplace; the
-    default is to make a (shallow) copy before any changes are applied.
+    If `inplace` is set to `True`, the dict `d` is modified in place;
+    the default is to make a (shallow) copy before any changes are
+    applied.
 
     This is the reverse of dict_diff().
     """
     if not inplace:
         d = d.copy()
 
-    d.update(patch.modifications)
-    for k in patch.deletions:
+    modifications, deletions = patch
+    d.update(modifications)
+    for k in deletions:
         del d[k]
 
     return d
@@ -181,7 +182,7 @@ def dict_diff_incremental(iterable):
 
 def dict_patch_incremental(d, patches, *, inplace=False):
     """
-    Reconstruct original dicts for a base dict and a series of patches.
+    Apply incremental dict patches and yield each intermediate result.
 
     This is the reverse of dict_diff_incremental().
     """
