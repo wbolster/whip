@@ -126,8 +126,7 @@ def test_dict_patching():
         assert_dict_equal(to_set, expected_to_set)
         assert_list_equal(sorted(to_delete), sorted(expected_to_delete))
 
-        recreated = base.copy()
-        dict_patch(recreated, patch)
+        recreated = dict_patch(base, patch)
         assert_dict_equal(original, recreated)
 
 
