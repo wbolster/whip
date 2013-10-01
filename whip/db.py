@@ -8,9 +8,9 @@ database. The key/value layout is as follows:
   fast range lookups.
 
 * The begin IP and the actual information is stored in the value. The
-  most recent infoset for a range is stored in full, encoded as JSON, so
-  that it can be returned quickly without any decoding and processing
-  overhead.
+  most recent information (as a dict) for a range is stored in full,
+  encoded as JSON, so that it can be returned quickly without any
+  decoding and processing overhead.
 
   To save a lot of space (and hence improve performance), historical
   data for an IP range is stored as diffs from the most recent version.
@@ -61,7 +61,7 @@ msgpack_dumps_utf8 = msgpack.Packer(encoding='UTF-8').pack  # idem
 DATETIME_GETTER = operator.itemgetter('datetime')
 
 
-def _debug_format_infoset(d):
+def _debug_format_dict(d):
     """Formatting function for debugging purposes"""
     return ', '.join('%s=%s' % (k[:1], v or '')
                      for k, v in sorted(d.items()))
@@ -76,27 +76,23 @@ def make_squash_key(d):
     return d
 
 
-def build_record(begin_ip_int, end_ip_int, infosets):
-    """Create database records for an iterable of merged infosets."""
+def build_record(begin_ip_int, end_ip_int, dicts):
+    """Create database records for an iterable of merged dicts."""
 
-    assert len(infosets) > 0
+    assert len(dicts) > 0
 
-    # Deduplicate. Each infoset will have a different timestamp, so sort
+    # Deduplicate. Each dict will have a different timestamp, so sort
     # chronologically, and ignore the datetime while deduplicating.
-    infosets.sort(key=DATETIME_GETTER)
-    unique_infosets = list(unique_justseen(infosets, key=make_squash_key))
+    dicts.sort(key=DATETIME_GETTER)
+    unique_dicts = list(unique_justseen(dicts, key=make_squash_key))
 
-    # The most recent infoset is stored in full, while older infosets are
-    # stored in a history structure with (reverse) diffs for each pair. This
-    # saves a lot of storage space, but requires "patching" during lookups.
-    # Since the storage layer is faster when working with smaller values, this
-    # is a trade-off between storage size and retrieval speed: either store
-    # less data (faster) and decode it when querying (slower), or store more
-    # data (slower) without any decoding (faster). The former works better in
-    # practice, especially when data sizes grow.
-    unique_infosets.reverse()
-    latest, history = dict_diff_incremental(unique_infosets)
-    history = list(history)  # consume iterator before serialization
+    # The most recent data is stored in full, while older dicts are
+    # stored in a history structure with (reverse) diffs for each pair.
+    # This saves a lot of storage space, but requires "patching" during
+    # lookups. The benefits of storing smaller values (less storage
+    # space, hence faster lookups) outweigh this disadvantage though.
+    unique_dicts.reverse()
+    latest, patches = dict_diff_incremental(unique_dicts)
 
     # Build the actual key and value byte strings.
     key = ipv4_int_to_bytes(end_ip_int)
@@ -104,7 +100,7 @@ def build_record(begin_ip_int, end_ip_int, infosets):
         ipv4_int_to_bytes(begin_ip_int),
         json_dumps(latest, ensure_ascii=False).encode('UTF-8'),
         latest['datetime'].encode('ascii'),
-        msgpack_dumps_utf8(history),
+        msgpack_dumps_utf8(list(patches)),
     ))
     return key, value
 
@@ -128,7 +124,7 @@ class Database(object):
         """Load data from importer iterables"""
 
         # Merge all iterables to produce unique, non-overlapping IP
-        # ranges with multiple timestamped infosets.
+        # ranges with multiple timestamped dicts.
         merged = merge_ranges(*iters)
 
         reporter = PeriodicCallback(lambda: logger.info(
@@ -136,12 +132,12 @@ class Database(object):
             n, ipv4_int_to_str(begin_ip_int)))  # pylint: disable=W0631
 
         n = 0
-        for begin_ip_int, end_ip_int, infosets in merged:
+        for begin_ip_int, end_ip_int, dicts in merged:
             n += 1
             if n % 100 == 1:
                 reporter.tick()
 
-            key, value = build_record(begin_ip_int, end_ip_int, infosets)
+            key, value = build_record(begin_ip_int, end_ip_int, dicts)
             self.db.put(key, value)
 
         if n > 0:
@@ -194,13 +190,13 @@ class Database(object):
 
         # Too bad, we need to delve deeper into history. Decode JSON,
         # iteratively apply patches, and re-encode to JSON again.
-        infoset = json_loads(latest_json)
-        history = msgpack_loads(
+        d = json_loads(latest_json)
+        patches = msgpack_loads(
             history_msgpack, use_list=False, encoding='UTF-8')
-        for infoset in dict_patch_incremental(infoset, history, inplace=True):
-            if infoset['datetime'] <= dt:
+        for d in dict_patch_incremental(d, patches, inplace=True):
+            if d['datetime'] <= dt:
                 # Finally found it; encode and return the result.
-                return json_dumps(infoset, ensure_ascii=False).encode('UTF-8')
+                return json_dumps(d, ensure_ascii=False).encode('UTF-8')
 
         # Too bad, no result
         return None
