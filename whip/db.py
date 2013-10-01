@@ -45,7 +45,7 @@ import plyvel
 from .json import dumps as json_dumps, loads as json_loads
 from .util import (
     dict_diff_incremental,
-    dict_patch,
+    dict_patch_incremental,
     ipv4_int_to_bytes,
     ipv4_int_to_str,
     merge_ranges,
@@ -188,8 +188,7 @@ class Database(object):
         infoset = json_loads(latest_json)
         history = msgpack_loads(
             history_msgpack, use_list=False, encoding='UTF-8')
-        for patch in history:
-            dict_patch(infoset, patch)
+        for infoset in dict_patch_incremental(infoset, history, inplace=True):
             if infoset['datetime'] <= dt:
                 # Finally found it; encode and return the result.
                 return json_dumps(infoset, ensure_ascii=False).encode('UTF-8')
