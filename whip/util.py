@@ -2,6 +2,7 @@
 Whip utility module.
 """
 
+import collections
 import heapq
 import itertools
 import operator
@@ -112,6 +113,11 @@ def merge_ranges(*inputs):
 # Dict diffing and squashing
 #
 
+DictPatch = collections.namedtuple(
+    'DictPatch',
+    ['modifications', 'deletions'])
+
+
 def dict_diff(d, base):
     """
     Calculate differences between a dict and a base dict.
@@ -124,9 +130,10 @@ def dict_diff(d, base):
 
     See also dict_patch().
     """
-    to_set = {k: v for k, v in d.items() if k not in base or base[k] != v}
-    to_delete = [k for k in base if k not in d]
-    return to_set, to_delete
+    return DictPatch(
+        {k: v for k, v in d.items() if k not in base or base[k] != v},
+        [k for k in base if k not in d],
+    )
 
 
 def dict_patch(d, patch, *, inplace=False):
@@ -141,9 +148,8 @@ def dict_patch(d, patch, *, inplace=False):
     if not inplace:
         d = d.copy()
 
-    to_set, to_delete = patch
-    d.update(to_set)
-    for k in to_delete:
+    d.update(patch.modifications)
+    for k in patch.deletions:
         del d[k]
 
     return d
