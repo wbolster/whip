@@ -1,11 +1,11 @@
 .PHONY: all test pylint flake8
 
-PACKAGES=whip
+PACKAGE=whip
 
 all: test pylint flake8
 
 test:
-	nosetests --verbose --with-coverage
+	nosetests --verbose --with-coverage --cover-package=${PACKAGE}
 
 pylint:
 	-pylint \
@@ -18,7 +18,7 @@ pylint:
 		--disable=star-args \
 		--disable=too-few-public-methods \
 		--disable=too-many-return-statements \
-		${PACKAGES}
+		${PACKAGE}
 
 flake8:
-	-flake8 ${PACKAGES}
+	-flake8 ${PACKAGE}
