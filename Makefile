@@ -17,6 +17,7 @@ pylint:
 		--disable=locally-disabled \
 		--disable=star-args \
 		--disable=too-few-public-methods \
+		--disable=too-many-return-statements \
 		${PACKAGES}
 
 flake8:
