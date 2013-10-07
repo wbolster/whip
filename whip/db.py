@@ -169,9 +169,9 @@ class Database(object):
         # The database key stores the end IP of all ranges, so a simple
         # seek positions the iterator at the right key (if found).
         self.iter.seek(ip)
-        try:
-            value = next(self.iter)
-        except StopIteration:
+        value = next(self.iter, None)
+
+        if value is None:
             # Past any range in the database: no hit
             return None
 
