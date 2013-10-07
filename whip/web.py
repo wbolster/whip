@@ -30,9 +30,9 @@ def lookup(ip):
     except socket.error:
         abort(400)
 
-    dt = request.args.get('datetime')
+    datetime = request.args.get('datetime')
+    info_as_json = db.lookup(key, datetime)
 
-    info_as_json = db.lookup(key, dt)
     if info_as_json is None:
         info_as_json = b'{}'  # empty dict, JSON-encoded
 

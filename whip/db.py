@@ -147,16 +147,16 @@ class Database(object):
         self.iter = None
 
     @functools.lru_cache(128 * 1024)
-    def lookup(self, ip, dt=None):
+    def lookup(self, ip, datetime=None):
         """Lookup a single IP address in the database.
 
         This function returns the found information as a JSON byte
         string, or `None` if no information was found.
 
-        If `dt` is `None`, the latest version is returned. If `dt` is
-        a datetime string, information for that timestamp is returned.
-        If `dt` has the special value 'all', the full history will be
-        returned.
+        If `datetime` is `None`, the latest version is returned. If
+        `datetime` is a datetime string, information for that timestamp
+        is returned. If `datetime` has the special value 'all', the full
+        history will be returned.
         """
 
         # Iterator construction is relatively costly, so reuse it for
@@ -186,12 +186,12 @@ class Database(object):
 
         # If the lookup is for the most recent version, we're done. No
         # decoding required.
-        if dt is None:
+        if datetime is None:
             return latest_json
 
-        return_history = (dt == 'all')
+        return_history = (datetime == 'all')
 
-        if not return_history and latest_datetime <= dt.encode('ascii'):
+        if not return_history and latest_datetime.decode('ascii') <= datetime:
             # The most recent version may be the one asked for. No
             # decoding required.
             return latest_json
@@ -214,7 +214,7 @@ class Database(object):
             # This is a lookup for a specific timestamp. Iteratively
             # apply patches until (hopefully) a match is found.
             for d in dict_patch_incremental(d, patches, inplace=True):
-                if d['datetime'] <= dt:
+                if d['datetime'] <= datetime:
                     return json_dumps(d, ensure_ascii=False).encode('UTF-8')
 
         # Too bad, no result
