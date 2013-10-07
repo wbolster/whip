@@ -1,4 +1,6 @@
 /*.egg-info/
+/.coverage
 /conf/
 /db/
+/db.*/
 /dist/
