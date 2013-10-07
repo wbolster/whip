@@ -31,10 +31,6 @@ def lookup(ip):
         abort(400)
 
     dt = request.args.get('datetime')
-    if dt:
-        dt = dt.encode('ascii')
-    else:
-        dt = None  # account for empty parameter value
 
     info_as_json = db.lookup(key, dt)
     if info_as_json is None:
