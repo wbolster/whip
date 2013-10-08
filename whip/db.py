@@ -151,7 +151,8 @@ class Database(object):
         """Lookup a single IP address in the database.
 
         This function returns the found information as a JSON byte
-        string, or `None` if no information was found.
+        string (encoded as UTF-8), or `None` if no information was
+        found.
 
         If `datetime` is `None`, the latest version is returned. If
         `datetime` is a datetime string, information for that timestamp
@@ -171,8 +172,8 @@ class Database(object):
         self.iter.seek(ip)
         value = next(self.iter, None)
 
+        # If the seek moved past the last range in the database: no hit
         if value is None:
-            # Past any range in the database: no hit
             return None
 
         # Decode the value
@@ -191,31 +192,31 @@ class Database(object):
 
         return_history = (datetime == 'all')
 
+        # The most recent version may be the one asked for. No decoding
+        # required in that case.
         if not return_history and latest_datetime.decode('ascii') <= datetime:
-            # The most recent version may be the one asked for. No
-            # decoding required.
             return latest_json
 
-        # Too bad, the history is actually needed. Decode both the
-        # latest version and the history.
+        # The history is actually needed to answer the query. Decode
+        # both the latest version and the history.
         d = json_loads(latest_json)
         patches = msgpack_loads(
             history_msgpack, use_list=False, encoding='UTF-8')
 
+        # Reconstruct complete history if the query asks for all
+        # historical data. The JSON response is an object (not a list)
+        # for security reasons.
         if return_history:
-            # This is a query for all historical data. Reconstruct
-            # complete history. The JSON response should decode to an
-            # object (not a list) for security reasons.
             history = [d]
             history.extend(dict_patch_incremental(d, patches, inplace=False))
             out = {'history': history}
             return json_dumps(out, ensure_ascii=False).encode('UTF-8')
-        else:
-            # This is a lookup for a specific timestamp. Iteratively
-            # apply patches until (hopefully) a match is found.
-            for d in dict_patch_incremental(d, patches, inplace=True):
-                if d['datetime'] <= datetime:
-                    return json_dumps(d, ensure_ascii=False).encode('UTF-8')
+
+        # This is a lookup for a specific timestamp. Iteratively
+        # apply patches until (hopefully) a match is found.
+        for d in dict_patch_incremental(d, patches, inplace=True):
+            if d['datetime'] <= datetime:
+                return json_dumps(d, ensure_ascii=False).encode('UTF-8')
 
         # Too bad, no result
         return None
