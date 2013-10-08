@@ -61,10 +61,9 @@ msgpack_dumps_utf8 = msgpack.Packer(encoding='UTF-8').pack  # idem
 DATETIME_GETTER = operator.itemgetter('datetime')
 
 
-def _debug_format_dict(d):
+def debug_format_dict(d):  # pragma: no cover
     """Formatting function for debugging purposes"""
-    return ', '.join('%s=%s' % (k[:1], v or '')
-                     for k, v in sorted(d.items()))
+    return ', '.join('%s=%s' % (k[:1], v or '') for k, v in sorted(d.items()))
 
 
 def make_squash_key(d):
