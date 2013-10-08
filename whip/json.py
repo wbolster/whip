@@ -1,19 +1,20 @@
 """
 JSON compatibility module.
 
-Use the fastest JSON implementation available and export dump and load
-function.
+This module use the fastest JSON implementation available.
 """
+
+import importlib
 
 for lib in ('ujson', 'simplejson', 'json'):
     try:
-        json = __import__(lib)
+        json = importlib.import_module(lib)
         break
     except ImportError:
         pass
 
 
-__all__ = ['dumps', 'loads']
+__all__ = ['dump', 'dumps', 'load', 'loads']
 
 dump = json.dump
 dumps = json.dumps
