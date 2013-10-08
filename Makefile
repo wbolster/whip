@@ -5,7 +5,7 @@ PACKAGE=whip
 all: test pylint flake8
 
 test:
-	nosetests --verbose --with-coverage --cover-package=${PACKAGE}
+	nosetests --verbose --with-coverage --cover-package=${PACKAGE} --cover-html --cover-html-dir coverage/
 
 pylint:
 	-pylint \
