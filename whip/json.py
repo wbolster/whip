@@ -10,7 +10,7 @@ for lib in ('ujson', 'simplejson', 'json'):
     try:
         json = importlib.import_module(lib)
         break
-    except ImportError:
+    except ImportError:  # pragma: no cover
         pass
 
 
