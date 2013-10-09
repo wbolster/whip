@@ -112,7 +112,7 @@ def perftest(db_dir, iterations, test_set, dt):
         _lookup(ip, dt)
 
     elapsed = time.time() - start_time
-    out = "{:d} lookups in {:.2f}s ({:.2f} req/s)".format(
+    out = "{:d} lookups in {:.2f}s ({:.0f} reqs/s)".format(
         n, elapsed, n / elapsed)
     print(out)
     print('Cache statistics:', _lookup.cache_info())
