@@ -3,3 +3,4 @@ Flask
 msgpack-python
 plyvel
 ujson
+-e .

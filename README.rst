@@ -16,7 +16,6 @@ Use a virtualenv to install Whip and its dependencies. To install from a source
 tree::
 
     $ pip install -r requirements.txt
-    $ pip install -e .
 
 
 Usage
