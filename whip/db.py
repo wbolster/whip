@@ -104,6 +104,11 @@ def build_record(begin_ip_int, end_ip_int, dicts):
     return key, value
 
 
+def msgpack_loads_patches(packed):
+    """Load a Msgpack encoded list of patches from a byte string"""
+    return msgpack_loads(packed, use_list=False, encoding='UTF-8')
+
+
 class Database(object):
     """
     Database access class for loading and looking up data.
@@ -199,8 +204,7 @@ class Database(object):
         # The history is actually needed to answer the query. Decode
         # both the latest version and the history.
         d = json_loads(latest_json)
-        patches = msgpack_loads(
-            history_msgpack, use_list=False, encoding='UTF-8')
+        patches = msgpack_loads_patches(history_msgpack)
 
         # Reconstruct complete history if the query asks for all
         # historical data. The JSON response is an object (not a list)
