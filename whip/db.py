@@ -34,6 +34,7 @@ saves a complete decode/encode (from Msgpack to JSON) roundtrip when
 executing queries asking for the most recent version.
 """
 
+import collections
 import functools
 import logging
 import operator
@@ -46,6 +47,7 @@ from .json import dumps as json_dumps, loads as json_loads
 from .util import (
     dict_diff_incremental,
     dict_patch_incremental,
+    ipv4_bytes_to_int,
     ipv4_int_to_bytes,
     ipv4_int_to_str,
     merge_ranges,
@@ -109,6 +111,26 @@ def msgpack_loads_patches(packed):
     return msgpack_loads(packed, use_list=False, encoding='UTF-8')
 
 
+ExistingRecord = collections.namedtuple(
+    'ExistingRecord',
+    ('latest_json', 'history_msgpack'))
+
+
+def iter_db_records(db):
+    """
+    Iterate a database and yield records that can be merged with new data.
+
+    This generator is suitable for consumption by merge_ranges().
+    """
+    for key, value in db.iterator(fill_cache=False):
+        unpacked = msgpack_loads(value, use_list=False)
+        begin_ip_bytes, latest_json, _, history_msgpack = unpacked
+        begin_ip = ipv4_bytes_to_int(begin_ip_bytes)
+        end_ip = ipv4_bytes_to_int(key)
+        record = ExistingRecord(latest_json, history_msgpack)
+        yield begin_ip, end_ip, record
+
+
 class Database(object):
     """
     Database access class for loading and looking up data.
@@ -124,28 +146,62 @@ class Database(object):
             lru_cache_size=128 * 1024 * 1024)
         self.iter = None
 
-    def load(self, *iters):
+    def load(self, *iterables):
         """Load data from importer iterables"""
 
-        # Merge all iterables to produce unique, non-overlapping IP
-        # ranges with multiple timestamped dicts.
-        merged = merge_ranges(*iters)
+        if not iterables:
+            logger.warning("No new input files; nothing to load")
+            return
 
+        # Combine new data with current database contents, and merge all
+        # iterables to produce unique, non-overlapping ranges.
+        iterables = list(iterables)
+        iterables.append(iter_db_records(self.db))
+        merged = merge_ranges(*iterables)
+
+        # Progress/status tracking
+        n_processed = n_updated = 0
+        begin_ip_int = 0
         reporter = PeriodicCallback(lambda: logger.info(
-            "%d database records stored; current position: %s",
-            n, ipv4_int_to_str(begin_ip_int)))  # pylint: disable=W0631
+            "%d ranges processed (%d updated, %d new); current position %s",
+            n_processed, n_updated, n_processed - n_updated,
+            ipv4_int_to_str(begin_ip_int)))
+        reporter.tick()
 
-        n = 0
-        for begin_ip_int, end_ip_int, dicts in merged:
-            n += 1
-            if n % 100 == 1:
+        # Loop over current database and new data
+        for begin_ip_int, end_ip_int, items in merged:
+            if n_processed % 100 == 0:
                 reporter.tick()
 
-            key, value = build_record(begin_ip_int, end_ip_int, dicts)
-            self.db.put(key, value)
+            # Find and pop existing record (if any) from the list.
+            existing = None
+            for idx, item in enumerate(items):
+                if isinstance(item, ExistingRecord):
+                    existing = item
+                    del items[idx]
+                    break
 
-        if n > 0:
-            reporter.tick(True)
+            # If the database already contained a record spanning this
+            # range, combine it with the newly added data.
+            if existing is not None:
+                latest = json_loads(existing.latest_json)
+                items.append(latest)
+                patches = msgpack_loads_patches(existing.history_msgpack)
+                items.extend(
+                    dict_patch_incremental(latest, patches, inplace=False))
+                n_updated += 1
+
+            # Build and store a new record
+            key, value = build_record(begin_ip_int, end_ip_int, items)
+            self.db.put(key, value)
+            n_processed += 1
+
+        reporter.tick(True)
+
+        logger.info("Compacting database...")
+        self.db.compact_range(
+            start=b'\x00\x00\x00\x00',
+            stop=b'\xff\xff\xff\xff')
 
         # Force lookups to use a new iterator so new data is seen.
         self.iter = None

@@ -40,7 +40,12 @@ def test_db_loading():
     with tempfile.TemporaryDirectory() as db_dir:
         db = Database(db_dir, create_if_missing=True)
         iters = [iter_snapshot(s) for s in snapshots]
-        db.load(*iters)
+
+        # db.load(*iters)
+
+        db.load(*iters[:-1])
+        db.load(iters[-1])
+        db.load()
 
         def lookup(ip, datetime=None):
             """Lookup a single version"""
