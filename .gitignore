@@ -1,6 +1,8 @@
 /*.egg-info/
 /.coverage
+/build/
 /conf/
+/coverage/
 /db/
 /db.*/
 /dist/
