@@ -13,6 +13,20 @@ def test_db_loading():
         """Helper to create test data"""
         return dict(begin=begin, end=end, x=x, datetime=datetime)
 
+    def iter_snapshot(snapshot):
+        for d in snapshot:
+            yield ipv4_str_to_int(d['begin']), ipv4_str_to_int(d['end']), d
+
+    def lookup(db, ip, datetime=None):
+        """Lookup a single version"""
+        ret = db.lookup(inet_aton(ip), datetime=datetime) or b'{}'
+        return json_loads(ret)
+
+    def lookup_all_x(db, ip):
+        """Lookup all versions, returning only the 'x' values"""
+        history = lookup(db, ip, 'all')['history']
+        return [d['x'] for d in history]
+
     snapshots = [
         [
             # Initial data
@@ -33,9 +47,30 @@ def test_db_loading():
         ],
     ]
 
-    def iter_snapshot(snapshot):
-        for d in snapshot:
-            yield ipv4_str_to_int(d['begin']), ipv4_str_to_int(d['end']), d
+    def check_sanity(db):
+
+        # Latest version
+        assert lookup(db, '1.0.0.0')['x'] == 4
+        assert lookup(db, '1.255.255.255')['x'] == 4
+        assert lookup(db, '7.0.0.0') == {}
+        assert lookup(db, '8.1.2.3')['x'] == 6
+        assert lookup(db, '12.0.0.0') == {}
+
+        # Specific dates
+        assert lookup(db, '1.2.3.3', '2010')['x'] == 1
+        assert lookup(db, '1.2.3.4', '2011')['x'] == 7
+        assert lookup(db, '1.2.3.5', '2011')['x'] == 8
+        assert lookup(db, '1.100.100.100', '2011')['x'] == 1
+        assert lookup(db, '8.1.2.3', '2011')['x'] == 3
+
+        # No hit for really old dates
+        assert lookup(db, '1.2.3.4', '2009') == {}
+
+        # Future date
+        assert lookup(db, '1.2.3.4', '2038')['x'] == 4
+
+        # All versions
+        assert lookup_all_x(db, '1.2.3.4') == [4, 7, 1]
 
     with tempfile.TemporaryDirectory() as db_dir:
         db = Database(db_dir, create_if_missing=True)
@@ -45,37 +80,7 @@ def test_db_loading():
 
         db.load(*iters[:-1])
         db.load(iters[-1])
+        db.load(iters[-1])
         db.load()
 
-        def lookup(ip, datetime=None):
-            """Lookup a single version"""
-            ret = db.lookup(inet_aton(ip), datetime=datetime) or b'{}'
-            return json_loads(ret)
-
-        def lookup_all_x(ip):
-            """Lookup all versions, returning only the 'x' values"""
-            history = lookup(ip, 'all')['history']
-            return [d['x'] for d in history]
-
-        # Latest version
-        assert lookup('1.0.0.0')['x'] == 4
-        assert lookup('1.255.255.255')['x'] == 4
-        assert lookup('7.0.0.0') == {}
-        assert lookup('8.1.2.3')['x'] == 6
-        assert lookup('12.0.0.0') == {}
-
-        # Specific dates
-        assert lookup('1.2.3.3', '2010')['x'] == 1
-        assert lookup('1.2.3.4', '2011')['x'] == 7
-        assert lookup('1.2.3.5', '2011')['x'] == 8
-        assert lookup('1.100.100.100', '2011')['x'] == 1
-        assert lookup('8.1.2.3', '2011')['x'] == 3
-
-        # No hit for really old dates
-        assert lookup('1.2.3.4', '2009') == {}
-
-        # Future date
-        assert lookup('1.2.3.4', '2038')['x'] == 4
-
-        # All versions
-        assert lookup_all_x('1.2.3.4') == [4, 7, 1]
+        check_sanity(db)
