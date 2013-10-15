@@ -73,10 +73,16 @@ def merge_ranges(*inputs):
 
     def generate_change_events(it, input_id):
         """Generate start/stop "edges" for an iterable"""
+        previous_end = -1
         for begin, end, data in it:
+            # Assert that the input data is well-formed: the begin of
+            # the range must be before the end, and each subsequent
+            # range must be past the previous one.
             assert begin <= end
+            assert begin > previous_end
             yield begin, EVENT_TYPE_BEGIN, input_id, data
             yield end + 1, EVENT_TYPE_END, input_id, None
+            previous_end = end
 
     changes_generators = [
         generate_change_events(input, input_id)
