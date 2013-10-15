@@ -9,21 +9,28 @@ from whip.util import ipv4_str_to_int
 
 def test_db_loading():
 
-    snapshot_1 = [
-        dict(begin='1.0.0.0', end='1.255.255.255', x=1, datetime='2010'),
-        dict(begin='3.0.0.0', end='3.255.255.255', x=2, datetime='2010'),
-        dict(begin='8.0.0.0', end='9.255.255.255', x=3, datetime='2010'),
-    ]
-
-    snapshot_2 = [
-        dict(begin='1.0.0.0', end='1.255.255.255', x=4, datetime='2011'),
-        dict(begin='3.0.0.0', end='3.255.255.255', x=5, datetime='2011'),
-        dict(begin='8.0.0.0', end='9.255.255.255', x=6, datetime='2011'),
-    ]
+    def t(begin, end, x, datetime):
+        """Helper to create test data"""
+        return dict(begin=begin, end=end, x=x, datetime=datetime)
 
     snapshots = [
-        snapshot_1,
-        snapshot_2,
+        [
+            # Initial data
+            t('1.0.0.0', '1.255.255.255', 1, '2010'),
+            t('3.0.0.0', '3.255.255.255', 2, '2010'),
+            t('8.0.0.0', '9.255.255.255', 3, '2010'),
+        ],
+        [
+            # Split some ranges, exclude some ranges
+            t('1.0.0.0', '1.2.3.4', 7, '2011'),
+            t('1.2.3.5', '1.3.4.5', 8, '2011'),
+        ],
+        [
+            # Merge some ranges, update some values
+            t('1.0.0.0', '1.255.255.255', 4, '2013'),
+            t('3.0.0.0', '3.255.255.255', 5, '2013'),
+            t('8.0.0.0', '9.255.255.255', 6, '2013'),
+        ],
     ]
 
     def iter_snapshot(snapshot):
@@ -36,8 +43,14 @@ def test_db_loading():
         db.load(*iters)
 
         def lookup(ip, datetime=None):
+            """Lookup a single version"""
             ret = db.lookup(inet_aton(ip), datetime=datetime) or b'{}'
             return json_loads(ret)
+
+        def lookup_all_x(ip):
+            """Lookup all versions, returning only the 'x' values"""
+            history = lookup(ip, 'all')['history']
+            return [d['x'] for d in history]
 
         # Latest version
         assert lookup('1.0.0.0')['x'] == 4
@@ -46,8 +59,12 @@ def test_db_loading():
         assert lookup('8.1.2.3')['x'] == 6
         assert lookup('12.0.0.0') == {}
 
-        # Older date
+        # Specific dates
         assert lookup('1.2.3.3', '2010')['x'] == 1
+        assert lookup('1.2.3.4', '2011')['x'] == 7
+        assert lookup('1.2.3.5', '2011')['x'] == 8
+        assert lookup('1.100.100.100', '2011')['x'] == 1
+        assert lookup('8.1.2.3', '2011')['x'] == 3
 
         # No hit for really old dates
         assert lookup('1.2.3.4', '2009') == {}
@@ -56,4 +73,4 @@ def test_db_loading():
         assert lookup('1.2.3.4', '2038')['x'] == 4
 
         # All versions
-        assert [d['x'] for d in lookup('1.2.3.4', 'all')['history']] == [4, 1]
+        assert lookup_all_x('1.2.3.4') == [4, 7, 1]
