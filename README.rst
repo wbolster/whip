@@ -56,6 +56,3 @@ Ideas / TODO
   performance for non-hits (in which case no DB calls are made).
 
 * Try out LMDB instead of LevelDB
-
-* Support for adding new data to an existing database. Currently Whip only
-  supports complete bulk imports.
