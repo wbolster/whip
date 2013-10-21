@@ -24,13 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 def lookup_and_print(db, ip, dt):
-    try:
-        key = socket.inet_aton(ip)
-    except OSError:
-        print("Invalid IP address")
-        return
-
-    value = db.lookup(key, dt)
+    value = db.lookup(ip, dt)
     if value is None:
         print("No hit found")
         return
@@ -97,13 +91,14 @@ def perftest(db_dir, iterations, test_set, dt):
 
     if test_set:
         logger.info("Using test set %r", test_set.name)
-        it = (socket.inet_aton(line.strip()) for line in test_set)
+        it = map(str.strip, test_set)
     else:
         logger.info("Running %d iterations with random IP addresses",
                     iterations)
         # Use a sliding window over random data to obtain 4 bytes at a time
         rand_bytes = os.urandom(iterations + size - 1)
-        it = (rand_bytes[n:n + size] for n in range(iterations))
+        it = (socket.inet_ntoa(rand_bytes[n:n + size])
+              for n in range(iterations))
 
     _lookup = db.lookup
     start_time = time.time()
