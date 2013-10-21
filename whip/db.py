@@ -246,8 +246,6 @@ class Database(object):
         # Check range boundaries. If the IP currently being looked up is
         # in a gap, there is no hit after all.
         if ip_packed < begin_ip_packed:
-            # FIXME: check range boundaries for the ipv4->ipv6 split in
-            # the key space
             return None
 
         # If the lookup is for the most recent version, we're done. No

@@ -32,17 +32,20 @@ def test_db_loading():
             t('1.0.0.0', '1.255.255.255', 1, '2010'),
             t('3.0.0.0', '3.255.255.255', 2, '2010'),
             t('8.0.0.0', '9.255.255.255', 3, '2010'),
+            t('2001::1', '2001::ff', 101, '2010'),
         ],
         [
             # Split some ranges, exclude some ranges
             t('1.0.0.0', '1.2.3.4', 7, '2011'),
             t('1.2.3.5', '1.3.4.5', 8, '2011'),
+            t('2001::1', '2001::aa', 102, '2011'),
         ],
         [
             # Merge some ranges, update some values
             t('1.0.0.0', '1.255.255.255', 4, '2013'),
             t('3.0.0.0', '3.255.255.255', 5, '2013'),
             t('8.0.0.0', '9.255.255.255', 6, '2013'),
+            t('2001::1', '2001::ff', 103, '2013'),
         ],
     ]
 
@@ -62,6 +65,8 @@ def test_db_loading():
             assert lookup(db, '7.0.0.0') == {}
             assert lookup(db, '8.1.2.3')['x'] == 6
             assert lookup(db, '12.0.0.0') == {}
+            assert lookup(db, '2001::aa')['x'] == 103
+            assert lookup(db, 'cdef::1234') == {}
 
             # Specific dates
             assert lookup(db, '1.2.3.3', '2010')['x'] == 1
@@ -69,15 +74,20 @@ def test_db_loading():
             assert lookup(db, '1.2.3.5', '2011')['x'] == 8
             assert lookup(db, '1.100.100.100', '2011')['x'] == 1
             assert lookup(db, '8.1.2.3', '2011')['x'] == 3
+            assert lookup(db, '2001::aa', '2011')['x'] == 102
+            assert lookup(db, '2001::ff', '2011')['x'] == 101
 
             # No hit for really old dates
             assert lookup(db, '1.2.3.4', '2009') == {}
 
             # Future date
             assert lookup(db, '1.2.3.4', '2038')['x'] == 4
+            assert lookup(db, '2001::ab', '2038')['x'] == 103
 
             # All versions
             assert lookup_all_x(db, '1.2.3.4') == [4, 7, 1]
+            assert lookup_all_x(db, '2001::1') == [103, 102, 101]
+            assert lookup_all_x(db, '2001::fc') == [103, 101]
 
     # Test loading in various combinations and check whether the
     # resulting database is correct.
