@@ -7,44 +7,61 @@ import heapq
 import itertools
 import operator
 import socket
-import struct
 import time
 
 
 #
-# IP address conversion utilities
+# IP address conversion utilities.
+#
+# These routines work for both IPv4 and IPv6. IPv4 addresses will be
+# mapped into the IPv6 space in the IPv6 range
+# 0000:0000:0000:0000:0000:0000:XXXX:XXXX.
+#
+# FIXME: this mapping breaks things like ::1 IPv6 addresses... :(
 #
 
-IPV4_STRUCT = struct.Struct('>L')
+def ip_int_to_packed(n):
+    """Convert an integer into a packed IP address byte string."""
+    return n.to_bytes(16, 'big')
 
 
-def ipv4_int_to_str(n, _inet_ntoa=socket.inet_ntoa, _pack=IPV4_STRUCT.pack):
-    """Convert an integer into an IPv4 address string.
-
-    This function converts a (max 32 bit) integer into the common
-    dot-decimal notation for IP addresses. Example: ``0x01020304``
-    becomes *1.2.3.4*.
-    """
-    return _inet_ntoa(_pack(n))
-
-
-def ipv4_str_to_int(s, _inet_aton=socket.inet_aton,
-                    _unpack=IPV4_STRUCT.unpack):
-    """Convert an IPv4 address string into an integer.
-
-    This is the reverse of :py:func:`ipv4_int_to_str`.
-    """
-    return _unpack(_inet_aton(s))[0]
+def ip_int_to_str(n):
+    """Convert an integer into an IP address string."""
+    try:
+        # IPv4
+        return socket.inet_ntop(socket.AF_INET, n.to_bytes(4, 'big'))
+    except OverflowError:
+        # IPv6
+        return socket.inet_ntop(socket.AF_INET6, n.to_bytes(16, 'big'))
 
 
-def ipv4_bytes_to_int(b, _unpack=IPV4_STRUCT.unpack):
-    """Convert a 4 byte string into an integer"""
-    return _unpack(b)[0]
+def ip_packed_to_int(b):
+    """Convert a packed IP address byte string into an integer"""
+    return int.from_bytes(b, 'big')
 
 
-def ipv4_int_to_bytes(n, _pack=IPV4_STRUCT.pack):
-    """Convert an integer into 4 byte string"""
-    return _pack(n)
+def ip_packed_to_str(b):
+    if b.startswith(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'):
+        return socket.inet_ntop(socket.AF_INET, b[-4:])
+
+    return socket.inet_ntop(socket.AF_INET6, b)
+
+
+def ip_str_to_int(s):
+    """Convert an IP address string into an integer."""
+    try:
+        b = socket.inet_pton(socket.AF_INET, s)  # IPv4
+    except OSError:
+        b = socket.inet_pton(socket.AF_INET6, s)  # IPv6
+
+    return int.from_bytes(b, 'big')
+
+
+def ip_str_to_packed(s):
+    try:
+        return socket.inet_pton(socket.AF_INET, s).rjust(16, b'\x00')  # IPv4
+    except OSError:
+        return socket.inet_pton(socket.AF_INET6, s)  # IPv6
 
 
 #

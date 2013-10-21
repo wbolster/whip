@@ -10,28 +10,62 @@ from whip.util import (
     dict_diff_incremental,
     dict_patch,
     dict_patch_incremental,
-    ipv4_bytes_to_int,
-    ipv4_int_to_bytes,
-    ipv4_int_to_str,
-    ipv4_str_to_int,
+    ip_int_to_packed,
+    ip_int_to_str,
+    ip_packed_to_int,
+    ip_packed_to_str,
+    ip_str_to_int,
+    ip_str_to_packed,
     merge_ranges,
 )
 
 
-def test_ipv4_conversion():
+def test_ip_conversion():
 
     items = [
-        (123, '0.0.0.123', b'\x00\x00\x00\x7b'),
-        (1234567890, '73.150.2.210', b'\x49\x96\x02\xd2'),
-        (0x010203ff, '1.2.3.255', b'\x01\x02\x03\xff'),
-        (0x10111213, '16.17.18.19', b'\x10\x11\x12\x13'),
+
+        # IPv4
+        (
+            123,
+            '0.0.0.123',
+            bytes.fromhex('0000 0000 0000 0000 0000 0000 0000 007b'),
+        ), (
+            1234567890,
+            '73.150.2.210',
+            bytes.fromhex('0000 0000 0000 0000 0000 0000 4996 02d2'),
+        ), (
+            0x010203ff,
+            '1.2.3.255',
+            bytes.fromhex('0000 0000 0000 0000 0000 0000 0102 03ff'),
+        ), (
+            0x10111213,
+            '16.17.18.19',
+            bytes.fromhex('0000 0000 0000 0000 0000 0000 1011 1213'),
+        ),
+
+        # IPv6
+        (
+            0x0102030405060708090a0b0c0d0e0faa,
+            '102:304:506:708:90a:b0c:d0e:faa',
+            bytes.fromhex('0102 0304 0506 0708 090a 0b0c 0d0e 0faa'),
+        ), (
+            0x20010db885a3004210008a2e03707334,
+            '2001:db8:85a3:42:1000:8a2e:370:7334',
+            bytes.fromhex('2001 0db8 85a3 0042 1000 8a2e 0370 7334'),
+        ), (
+            0x20010db8000000000000ff0000428329,
+            '2001:db8::ff00:42:8329',
+            bytes.fromhex('2001 0db8 0000 0000 0000 ff00 0042 8329'),
+        ),
     ]
 
-    for as_int, as_human, as_bytes in items:
-        assert_equal(ipv4_int_to_str(as_int), as_human)
-        assert_equal(ipv4_int_to_bytes(as_int), as_bytes)
-        assert_equal(ipv4_str_to_int(as_human), as_int)
-        assert_equal(ipv4_bytes_to_int(as_bytes), as_int)
+    for as_int, as_str, as_packed in items:
+        assert_equal(ip_int_to_str(as_int), as_str)
+        assert_equal(ip_int_to_packed(as_int), as_packed)
+        assert_equal(ip_str_to_int(as_str), as_int)
+        assert_equal(ip_packed_to_int(as_packed), as_int)
+        assert_equal(ip_str_to_packed(as_str), as_packed)
+        assert_equal(ip_packed_to_str(as_packed), as_str)
 
 
 def test_merge_ranges():
