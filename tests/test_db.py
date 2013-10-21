@@ -1,10 +1,9 @@
 
-from socket import inet_aton
 import tempfile
 
 from whip.db import Database
 from whip.json import loads as json_loads
-from whip.util import ipv4_str_to_int
+from whip.util import ip_str_to_int
 
 
 def test_db_loading():
@@ -15,11 +14,11 @@ def test_db_loading():
 
     def iter_snapshot(snapshot):
         for d in snapshot:
-            yield ipv4_str_to_int(d['begin']), ipv4_str_to_int(d['end']), d
+            yield ip_str_to_int(d['begin']), ip_str_to_int(d['end']), d
 
     def lookup(db, ip, datetime=None):
         """Lookup a single version"""
-        ret = db.lookup(inet_aton(ip), datetime=datetime) or b'{}'
+        ret = db.lookup(ip, datetime=datetime) or b'{}'
         return json_loads(ret)
 
     def lookup_all_x(db, ip):

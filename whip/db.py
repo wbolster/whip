@@ -19,8 +19,8 @@ database. The key/value layout is as follows:
 
   The value is a 4-tuple packed using Msgpack like this:
 
-  * IPv4 begin address (4 bytes)
-  * JSON encoded data for the latest version (variable length)
+  * IP begin address
+  * JSON encoded data for the latest version
   * Latest datetime
   * Msgpack encoded diffs for older versions (yes, Msgpack in Msgpack,
     since this nested structure is not always needed and lets us decode
@@ -47,9 +47,10 @@ from .json import dumps as json_dumps, loads as json_loads
 from .util import (
     dict_diff_incremental,
     dict_patch_incremental,
-    ipv4_bytes_to_int,
-    ipv4_int_to_bytes,
-    ipv4_int_to_str,
+    ip_packed_to_int,
+    ip_int_to_packed,
+    ip_int_to_str,
+    ip_str_to_packed,
     merge_ranges,
     PeriodicCallback,
     unique_justseen,
@@ -96,9 +97,9 @@ def build_record(begin_ip_int, end_ip_int, dicts):
     latest, patches = dict_diff_incremental(unique_dicts)
 
     # Build the actual key and value byte strings.
-    key = ipv4_int_to_bytes(end_ip_int)
+    key = ip_int_to_packed(end_ip_int)
     value = msgpack_dumps((
-        ipv4_int_to_bytes(begin_ip_int),
+        ip_int_to_packed(begin_ip_int),
         json_dumps(latest, ensure_ascii=False).encode('UTF-8'),
         latest['datetime'].encode('ascii'),
         msgpack_dumps_utf8(list(patches)),
@@ -124,9 +125,9 @@ def iter_db_records(db):
     """
     for key, value in db.iterator(fill_cache=False):
         unpacked = msgpack_loads(value, use_list=False)
-        begin_ip_bytes, latest_json, _, history_msgpack = unpacked
-        begin_ip = ipv4_bytes_to_int(begin_ip_bytes)
-        end_ip = ipv4_bytes_to_int(key)
+        begin_ip_packed, latest_json, _, history_msgpack = unpacked
+        begin_ip = ip_packed_to_int(begin_ip_packed)
+        end_ip = ip_packed_to_int(key)
         record = ExistingRecord(latest_json, history_msgpack)
         yield begin_ip, end_ip, record
 
@@ -165,7 +166,7 @@ class Database(object):
         reporter = PeriodicCallback(lambda: logger.info(
             "%d ranges processed (%d updated, %d new); current position %s",
             n_processed, n_updated, n_processed - n_updated,
-            ipv4_int_to_str(begin_ip_int)))
+            ip_int_to_str(begin_ip_int)))
         reporter.tick()
 
         # Loop over current database and new data
@@ -220,6 +221,8 @@ class Database(object):
         history will be returned.
         """
 
+        ip_packed = ip_str_to_packed(ip)
+
         # Iterator construction is relatively costly, so reuse it for
         # performance reasons. The iterator won't see any data written
         # after its construction, but that is not a problem since the
@@ -229,7 +232,7 @@ class Database(object):
 
         # The database key stores the end IP of all ranges, so a simple
         # seek positions the iterator at the right key (if found).
-        self.iter.seek(ip)
+        self.iter.seek(ip_packed)
         value = next(self.iter, None)
 
         # If the seek moved past the last range in the database: no hit
@@ -238,11 +241,13 @@ class Database(object):
 
         # Decode the value
         value = msgpack_loads(value, use_list=False)
-        begin_ip, latest_json, latest_datetime, history_msgpack = value
+        begin_ip_packed, latest_json, latest_datetime, history_msgpack = value
 
         # Check range boundaries. If the IP currently being looked up is
         # in a gap, there is no hit after all.
-        if ip < begin_ip:
+        if ip_packed < begin_ip_packed:
+            # FIXME: check range boundaries for the ipv4->ipv6 split in
+            # the key space
             return None
 
         # If the lookup is for the most recent version, we're done. No
