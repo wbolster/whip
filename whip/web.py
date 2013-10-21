@@ -4,9 +4,7 @@ Whip's REST API
 
 # pylint: disable=missing-docstring
 
-from socket import inet_aton
-
-from flask import Flask, abort, make_response, request
+from flask import Flask, make_response, request
 
 from .db import Database
 
@@ -25,13 +23,8 @@ def _open_db():
 
 @app.route('/ip/<ip>')
 def lookup(ip):
-    try:
-        key = inet_aton(ip)
-    except OSError:
-        abort(400)
-
     datetime = request.args.get('datetime')
-    info_as_json = db.lookup(key, datetime)
+    info_as_json = db.lookup(ip, datetime)
 
     if info_as_json is None:
         info_as_json = b'{}'  # empty dict, JSON-encoded
