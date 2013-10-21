@@ -14,11 +14,15 @@ import time
 # IP address conversion utilities.
 #
 # These routines work for both IPv4 and IPv6. IPv4 addresses will be
-# mapped into the IPv6 space in the IPv6 range
-# 0000:0000:0000:0000:0000:0000:XXXX:XXXX.
-#
-# FIXME: this mapping breaks things like ::1 IPv6 addresses... :(
-#
+# mapped into the IPv6 space in the IPv6 range using the mapping from
+# RFC3493: 80 bits of zeroes, then 16 bits of ones, followed by the 32
+# bits for the IPv4 address, i.e.
+# 0000:0000:0000:0000:0000:ffff:XXXX:XXXX.
+
+IPV4_MAPPED_IPV6_PREFIX = bytes.fromhex(
+    '0000 0000 0000 0000 0000 ffff'
+)
+
 
 def ip_int_to_packed(n):
     """Convert an integer into a packed IP address byte string."""
@@ -27,12 +31,14 @@ def ip_int_to_packed(n):
 
 def ip_int_to_str(n):
     """Convert an integer into an IP address string."""
-    try:
-        # IPv4
-        return socket.inet_ntop(socket.AF_INET, n.to_bytes(4, 'big'))
-    except OverflowError:
-        # IPv6
-        return socket.inet_ntop(socket.AF_INET6, n.to_bytes(16, 'big'))
+    # IPv4
+    if 0xffff00000000 < n <= 0xffffffffffff:
+        return socket.inet_ntop(
+            socket.AF_INET,
+            (n & 0xffffffff).to_bytes(4, 'big'))
+
+    # IPv6
+    return socket.inet_ntop(socket.AF_INET6, n.to_bytes(16, 'big'))
 
 
 def ip_packed_to_int(b):
@@ -41,7 +47,7 @@ def ip_packed_to_int(b):
 
 
 def ip_packed_to_str(b):
-    if b.startswith(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'):
+    if b.startswith(IPV4_MAPPED_IPV6_PREFIX):
         return socket.inet_ntop(socket.AF_INET, b[-4:])
 
     return socket.inet_ntop(socket.AF_INET6, b)
@@ -50,18 +56,21 @@ def ip_packed_to_str(b):
 def ip_str_to_int(s):
     """Convert an IP address string into an integer."""
     try:
-        b = socket.inet_pton(socket.AF_INET, s)  # IPv4
+        # IPv4
+        n = int.from_bytes(socket.inet_pton(socket.AF_INET, s), 'big')
+        return n | 0xffff00000000
     except OSError:
-        b = socket.inet_pton(socket.AF_INET6, s)  # IPv6
-
-    return int.from_bytes(b, 'big')
+        # IPv6
+        return int.from_bytes(socket.inet_pton(socket.AF_INET6, s), 'big')
 
 
 def ip_str_to_packed(s):
     try:
-        return socket.inet_pton(socket.AF_INET, s).rjust(16, b'\x00')  # IPv4
+        # IPv4
+        return IPV4_MAPPED_IPV6_PREFIX + socket.inet_pton(socket.AF_INET, s)
     except OSError:
-        return socket.inet_pton(socket.AF_INET6, s)  # IPv6
+        # IPv6
+        return socket.inet_pton(socket.AF_INET6, s)
 
 
 #
