@@ -40,10 +40,6 @@ Dependencies
 Ideas / TODO
 ============
 
-* Add support for IPv6; for the database part simply padding IPv4 addresses with
-  NUL bytes at the left should be sufficient; the parsing/merging logic needs
-  more attention.
-
 * Perform range scan on in-memory structure instead seeking on a DB iterator.
   This means Whip must load all keys in memory on startup (in an `array.array`);
   use `bisect.bisect_right` to find the right entry, then simply `db.get()` for
