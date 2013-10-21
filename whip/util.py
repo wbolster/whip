@@ -32,7 +32,7 @@ def ip_int_to_packed(n):
 def ip_int_to_str(n):
     """Convert an integer into an IP address string."""
     # IPv4
-    if 0xffff00000000 < n <= 0xffffffffffff:
+    if 0xffff00000000 <= n <= 0xffffffffffff:
         return socket.inet_ntop(
             socket.AF_INET,
             (n & 0xffffffff).to_bytes(4, 'big'))
