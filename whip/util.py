@@ -25,12 +25,12 @@ IPV4_MAPPED_IPV6_PREFIX = bytes.fromhex(
 
 
 def ip_int_to_packed(n):
-    """Convert an integer into a packed IP address byte string."""
+    """Convert an integer to a packed IP address byte string."""
     return n.to_bytes(16, 'big')
 
 
 def ip_int_to_str(n):
-    """Convert an integer into an IP address string."""
+    """Convert an integer to an IP address string."""
     # IPv4
     if 0xffff00000000 <= n <= 0xffffffffffff:
         return inet_ntoa((n & 0xffffffff).to_bytes(4, 'big'))
@@ -40,11 +40,12 @@ def ip_int_to_str(n):
 
 
 def ip_packed_to_int(b):
-    """Convert a packed IP address byte string into an integer"""
+    """Convert a packed IP address byte string to an integer"""
     return int.from_bytes(b, 'big')
 
 
 def ip_packed_to_str(b):
+    """Convert a packed IP address byte string to a string"""
     # IPv4
     if b.startswith(IPV4_MAPPED_IPV6_PREFIX):
         return inet_ntoa(b[-4:])
@@ -54,7 +55,7 @@ def ip_packed_to_str(b):
 
 
 def ip_str_to_int(s):
-    """Convert an IP address string into an integer."""
+    """Convert an IP address string to an integer."""
     try:
         # IPv4
         n = int.from_bytes(inet_pton(AF_INET, s), 'big')
@@ -65,6 +66,7 @@ def ip_str_to_int(s):
 
 
 def ip_str_to_packed(s):
+    """Convert an IP address string to a packed IP address byte string."""
     try:
         # IPv4
         return IPV4_MAPPED_IPV6_PREFIX + inet_pton(AF_INET, s)
