@@ -35,6 +35,7 @@ Dependencies
 * *Flask* for the REST API
 * *Aaargh* for the command line tool
 * *UltraJSON (*ujson*) for fast JSON encoding and decoding
+* *Msgpack* for Msgpack encoding and decoding
 
 
 Ideas / TODO
