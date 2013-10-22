@@ -199,9 +199,7 @@ class Database(object):
         reporter.tick(True)
 
         logger.info("Compacting database...")
-        self.db.compact_range(
-            start=b'\x00\x00\x00\x00',
-            stop=b'\xff\xff\xff\xff')
+        self.db.compact_range(start=b'\x00' * 16, stop=b'\xff' * 16)
 
         # Force lookups to use a new iterator so new data is seen.
         self.iter = None
