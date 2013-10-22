@@ -117,21 +117,6 @@ ExistingRecord = collections.namedtuple(
     ('latest_json', 'history_msgpack'))
 
 
-def iter_db_records(db):
-    """
-    Iterate a database and yield records that can be merged with new data.
-
-    This generator is suitable for consumption by merge_ranges().
-    """
-    for key, value in db.iterator(fill_cache=False):
-        unpacked = msgpack_loads(value, use_list=False)
-        begin_ip_packed, latest_json, _, history_msgpack = unpacked
-        begin_ip = ip_packed_to_int(begin_ip_packed)
-        end_ip = ip_packed_to_int(key)
-        record = ExistingRecord(latest_json, history_msgpack)
-        yield begin_ip, end_ip, record
-
-
 class Database(object):
     """
     Database access class for loading and looking up data.
@@ -147,6 +132,20 @@ class Database(object):
             lru_cache_size=128 * 1024 * 1024)
         self.iter = None
 
+    def iter_records(self):
+        """
+        Iterate a database and yield records that can be merged with new data.
+
+        This generator is suitable for consumption by merge_ranges().
+        """
+        for key, value in self.db.iterator(fill_cache=False):
+            unpacked = msgpack_loads(value, use_list=False)
+            begin_ip_packed, latest_json, _, history_msgpack = unpacked
+            begin_ip = ip_packed_to_int(begin_ip_packed)
+            end_ip = ip_packed_to_int(key)
+            record = ExistingRecord(latest_json, history_msgpack)
+            yield begin_ip, end_ip, record
+
     def load(self, *iterables):
         """Load data from importer iterables"""
 
@@ -157,7 +156,7 @@ class Database(object):
         # Combine new data with current database contents, and merge all
         # iterables to produce unique, non-overlapping ranges.
         iterables = list(iterables)
-        iterables.append(iter_db_records(self.db))
+        iterables.append(self.iter_records())
         merged = merge_ranges(*iterables)
 
         # Progress/status tracking
