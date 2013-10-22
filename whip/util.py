@@ -33,9 +33,7 @@ def ip_int_to_str(n):
     """Convert an integer into an IP address string."""
     # IPv4
     if 0xffff00000000 <= n <= 0xffffffffffff:
-        return socket.inet_ntop(
-            socket.AF_INET,
-            (n & 0xffffffff).to_bytes(4, 'big'))
+        return socket.inet_ntoa((n & 0xffffffff).to_bytes(4, 'big'))
 
     # IPv6
     return socket.inet_ntop(socket.AF_INET6, n.to_bytes(16, 'big'))
