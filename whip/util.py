@@ -6,7 +6,7 @@ import collections
 import heapq
 import itertools
 import operator
-import socket
+from socket import AF_INET, AF_INET6, inet_ntoa, inet_ntop, inet_pton
 import time
 
 
@@ -33,10 +33,10 @@ def ip_int_to_str(n):
     """Convert an integer into an IP address string."""
     # IPv4
     if 0xffff00000000 <= n <= 0xffffffffffff:
-        return socket.inet_ntoa((n & 0xffffffff).to_bytes(4, 'big'))
+        return inet_ntoa((n & 0xffffffff).to_bytes(4, 'big'))
 
     # IPv6
-    return socket.inet_ntop(socket.AF_INET6, n.to_bytes(16, 'big'))
+    return inet_ntop(AF_INET6, n.to_bytes(16, 'big'))
 
 
 def ip_packed_to_int(b):
@@ -45,30 +45,32 @@ def ip_packed_to_int(b):
 
 
 def ip_packed_to_str(b):
+    # IPv4
     if b.startswith(IPV4_MAPPED_IPV6_PREFIX):
-        return socket.inet_ntop(socket.AF_INET, b[-4:])
+        return inet_ntoa(b[-4:])
 
-    return socket.inet_ntop(socket.AF_INET6, b)
+    # IPv6
+    return inet_ntop(AF_INET6, b)
 
 
 def ip_str_to_int(s):
     """Convert an IP address string into an integer."""
     try:
         # IPv4
-        n = int.from_bytes(socket.inet_pton(socket.AF_INET, s), 'big')
+        n = int.from_bytes(inet_pton(AF_INET, s), 'big')
         return n | 0xffff00000000
     except OSError:
         # IPv6
-        return int.from_bytes(socket.inet_pton(socket.AF_INET6, s), 'big')
+        return int.from_bytes(inet_pton(AF_INET6, s), 'big')
 
 
 def ip_str_to_packed(s):
     try:
         # IPv4
-        return IPV4_MAPPED_IPV6_PREFIX + socket.inet_pton(socket.AF_INET, s)
+        return IPV4_MAPPED_IPV6_PREFIX + inet_pton(AF_INET, s)
     except OSError:
         # IPv6
-        return socket.inet_pton(socket.AF_INET6, s)
+        return inet_pton(AF_INET6, s)
 
 
 #
