@@ -37,6 +37,8 @@ Dependencies
 * *UltraJSON (*ujson*) for fast JSON encoding and decoding
 * *Msgpack* for Msgpack encoding and decoding
 
+See the ``requirements.txt`` file for more information.
+
 
 Ideas / TODO
 ============
