@@ -101,12 +101,13 @@ def build_record(begin_ip_int, end_ip_int, dicts, existing=None):
         # lookups. The benefits of storing smaller values (less storage
         # space, hence faster lookups) outweigh this disadvantage though.
         unique_dicts.reverse()
-        latest, patches = dict_diff_incremental(unique_dicts)
+        latest, diffs_generator = dict_diff_incremental(unique_dicts)
+        diffs = list(diffs_generator)
 
         # Serialize
         latest_json = json_dumps(latest, ensure_ascii=False).encode('UTF-8')
         latest_datetime = latest['datetime']
-        history_msgpack = msgpack_dumps_utf8(list(patches))
+        history_msgpack = msgpack_dumps_utf8(diffs)
 
     else:
         # No new data to add, so avoid expensive re-serialisation of the
