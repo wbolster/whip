@@ -99,13 +99,18 @@ def build_record(begin_ip_int, end_ip_int, dicts, existing=None):
     unique_dicts.reverse()
     latest, patches = dict_diff_incremental(unique_dicts)
 
+    # Serialize
+    latest_json = json_dumps(latest, ensure_ascii=False).encode('UTF-8')
+    latest_datetime = latest['datetime']
+    history_msgpack = msgpack_dumps_utf8(list(patches))
+
     # Build the actual key and value byte strings.
     key = ip_int_to_packed(end_ip_int)
     value = msgpack_dumps((
         ip_int_to_packed(begin_ip_int),
-        json_dumps(latest, ensure_ascii=False).encode('UTF-8'),
-        latest['datetime'].encode('ascii'),
-        msgpack_dumps_utf8(list(patches)),
+        latest_json,
+        latest_datetime.encode('ascii'),
+        history_msgpack,
     ))
     return key, value
 
