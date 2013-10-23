@@ -106,8 +106,8 @@ def merge_ranges(*inputs):
             # Assert that the input data is well-formed: the begin of
             # the range must be before the end, and each subsequent
             # range must be past the previous one.
-            assert begin <= end
-            assert begin > previous_end
+            assert begin <= end, "begin must come before end of range"
+            assert begin > previous_end, "ranges overlap or not sorted"
             yield begin, EVENT_TYPE_BEGIN, input_id, data
             yield end + 1, EVENT_TYPE_END, input_id, None
             previous_end = end
