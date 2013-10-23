@@ -34,7 +34,6 @@ saves a complete decode/encode (from Msgpack to JSON) roundtrip when
 executing queries asking for the most recent version.
 """
 
-import collections
 import functools
 import logging
 import operator
@@ -112,9 +111,30 @@ def msgpack_loads_patches(packed):
     return msgpack_loads(packed, use_list=False, encoding='UTF-8')
 
 
-ExistingRecord = collections.namedtuple(
-    'ExistingRecord',
-    ('latest_json', 'history_msgpack'))
+class ExistingRecord(object):
+    """Helper class for working with records retrieved from the database."""
+    def __init__(self, key, value):
+        unpacked = msgpack_loads(value, use_list=False)
+
+        # IP addresses
+        self.begin_ip_packed = unpacked[0]
+        self.end_ip_packed = key
+
+        # Actual data, without any expensive decoding applied
+        self.latest_json = unpacked[1]
+        self.latest_datetime = unpacked[2].decode('ascii')
+        self.history_msgpack = unpacked[3]
+
+    def iter_versions(self):
+        """Lazily reconstruct all versions in this record."""
+
+        # Latest version
+        latest = json_loads(self.latest_json)
+        yield latest
+
+        # Reconstruct history by applying patches incrementally
+        patches = msgpack_loads_patches(self.history_msgpack)
+        yield from dict_patch_incremental(latest, patches, inplace=False)
 
 
 class Database(object):
@@ -139,12 +159,12 @@ class Database(object):
         This generator is suitable for consumption by merge_ranges().
         """
         for key, value in self.db.iterator(fill_cache=False):
-            unpacked = msgpack_loads(value, use_list=False)
-            begin_ip_packed, latest_json, _, history_msgpack = unpacked
-            begin_ip = ip_packed_to_int(begin_ip_packed)
-            end_ip = ip_packed_to_int(key)
-            record = ExistingRecord(latest_json, history_msgpack)
-            yield begin_ip, end_ip, record
+            record = ExistingRecord(key, value)
+            yield (
+                ip_packed_to_int(record.begin_ip_packed),
+                ip_packed_to_int(record.end_ip_packed),
+                record,
+            )
 
     def load(self, *iterables):
         """Load data from importer iterables"""
@@ -184,11 +204,7 @@ class Database(object):
             # If the database already contained a record spanning this
             # range, combine it with the newly added data.
             if existing is not None:
-                latest = json_loads(existing.latest_json)
-                items.append(latest)
-                patches = msgpack_loads_patches(existing.history_msgpack)
-                items.extend(
-                    dict_patch_incremental(latest, patches, inplace=False))
+                items.extend(existing.iter_versions())
                 n_updated += 1
 
             # Build and store a new record
