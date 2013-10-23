@@ -106,14 +106,12 @@ def build_record(begin_ip_int, end_ip_int, dicts):
     return key, value
 
 
-def msgpack_loads_patches(packed):
-    """Load a Msgpack encoded list of patches from a byte string"""
-    return msgpack_loads(packed, use_list=False, encoding='UTF-8')
-
-
 class ExistingRecord(object):
     """Helper class for working with records retrieved from the database."""
     def __init__(self, key, value):
+        # Performance note: except for the initial value unpacking, all
+        # expensive deserialization operations are deferred until
+        # requested.
         unpacked = msgpack_loads(value, use_list=False)
 
         # IP addresses
@@ -125,7 +123,7 @@ class ExistingRecord(object):
         self.latest_datetime = unpacked[2].decode('ascii')
         self.history_msgpack = unpacked[3]
 
-    def iter_versions(self):
+    def iter_versions(self, inplace=False):
         """Lazily reconstruct all versions in this record."""
 
         # Latest version
@@ -133,8 +131,13 @@ class ExistingRecord(object):
         yield latest
 
         # Reconstruct history by applying patches incrementally
-        patches = msgpack_loads_patches(self.history_msgpack)
-        yield from dict_patch_incremental(latest, patches, inplace=False)
+        yield from dict_patch_incremental(
+            latest,
+            msgpack_loads(
+                self.history_msgpack,
+                use_list=False,
+                encoding='UTF-8'),
+            inplace=inplace)
 
 
 class Database(object):
@@ -234,6 +237,7 @@ class Database(object):
         history will be returned.
         """
 
+        # Pack incoming IP address to a format suitable for lookups.
         ip_packed = ip_str_to_packed(ip)
 
         # Iterator construction is relatively costly, so reuse it for
@@ -241,55 +245,50 @@ class Database(object):
         # after its construction, but that is not a problem since the
         # data set is static.
         if self.iter is None:
-            self.iter = self.db.iterator(include_key=False)
+            self.iter = self.db.iterator()
 
         # The database key stores the end IP of all ranges, so a simple
         # seek positions the iterator at the right key (if found).
         self.iter.seek(ip_packed)
-        value = next(self.iter, None)
+        db_record = next(self.iter, None)
 
         # If the seek moved past the last range in the database: no hit
-        if value is None:
+        if db_record is None:
             return None
 
         # Decode the value
-        value = msgpack_loads(value, use_list=False)
-        begin_ip_packed, latest_json, latest_datetime, history_msgpack = value
+        key, value = db_record
+        record = ExistingRecord(key, value)
 
         # Check range boundaries. If the IP currently being looked up is
         # in a gap, there is no hit after all.
-        if ip_packed < begin_ip_packed:
+        if ip_packed < record.begin_ip_packed:
             return None
 
         # If the lookup is for the most recent version, we're done. No
         # decoding required.
         if datetime is None:
-            return latest_json
+            return record.latest_json
 
         return_history = (datetime == 'all')
 
         # The most recent version may be the one asked for. No decoding
         # required in that case.
-        if not return_history and latest_datetime.decode('ascii') <= datetime:
-            return latest_json
-
-        # The history is actually needed to answer the query. Decode
-        # both the latest version and the history.
-        d = json_loads(latest_json)
-        patches = msgpack_loads_patches(history_msgpack)
+        if not return_history and record.latest_datetime <= datetime:
+            return record.latest_json
 
         # Reconstruct complete history if the query asks for all
         # historical data. The JSON response is an object (not a list)
         # for security reasons.
         if return_history:
-            history = [d]
-            history.extend(dict_patch_incremental(d, patches, inplace=False))
-            out = {'history': history}
-            return json_dumps(out, ensure_ascii=False).encode('UTF-8')
+            return json_dumps(
+                {'history': list(record.iter_versions())},
+                ensure_ascii=False,
+            ).encode('UTF-8')
 
         # This is a lookup for a specific timestamp. Iteratively
         # apply patches until (hopefully) a match is found.
-        for d in dict_patch_incremental(d, patches, inplace=True):
+        for d in record.iter_versions(inplace=True):
             if d['datetime'] <= datetime:
                 return json_dumps(d, ensure_ascii=False).encode('UTF-8')
 
