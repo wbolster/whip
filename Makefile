@@ -2,7 +2,10 @@
 
 PACKAGE=whip
 
-all: test pylint flake8
+all: README.html test pylint flake8
+
+README.html: README.rst
+	rst2html $< > $@
 
 test:
 	nosetests --verbose --with-coverage --cover-erase --cover-package=${PACKAGE} --cover-html --cover-html-dir coverage/
