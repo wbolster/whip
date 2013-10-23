@@ -77,8 +77,12 @@ def make_squash_key(d):
     return d
 
 
-def build_record(begin_ip_int, end_ip_int, dicts):
+def build_record(begin_ip_int, end_ip_int, dicts, existing=None):
     """Create database records for an iterable of merged dicts."""
+
+    # Combine existing record spanning this range with new data
+    if existing is not None:
+        dicts.extend(existing.iter_versions())
 
     assert len(dicts) > 0
 
@@ -204,16 +208,18 @@ class Database(object):
                     del items[idx]
                     break
 
-            # If the database already contained a record spanning this
-            # range, combine it with the newly added data.
-            if existing is not None:
-                items.extend(existing.iter_versions())
-                n_updated += 1
-
             # Build and store a new record
-            key, value = build_record(begin_ip_int, end_ip_int, items)
+            key, value = build_record(
+                begin_ip_int,
+                end_ip_int,
+                items,
+                existing)
             self.db.put(key, value)
+
+            # Update counters
             n_processed += 1
+            if existing is not None:
+                n_updated += 1
 
         reporter.tick(True)
 
