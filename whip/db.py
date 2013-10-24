@@ -2,22 +2,28 @@
 Whip database storage module.
 
 All IP ranges with associated information are stored in a LevelDB
-database. The key/value layout is as follows:
+database.
 
-* The end IP is used as the key. This allows for quick
-  fast range lookups.
+Some remarks about the construction of database records:
 
-* The begin IP and the actual information is stored in the value. The
-  most recent information (as a dict) for a range is stored in full,
-  encoded as JSON, so that it can be returned quickly without any
-  decoding and processing overhead.
+* The most recent version of a record is stored in full, and older dicts
+  are stored in a history structure of (reverse) diffs. This saves a lot
+  of storage space and positively affects performance, since the
+  benefits of storing/retrieving less data outweigh the cost of
+  reconstructing historical records for historical lookups.
 
-  To save a lot of space (and hence improve performance), historical
-  data for an IP range is stored as diffs from the most recent version.
-  When querying for older versions, the original data is reconstructed
-  on-demand.
+* Before creating diffs, the data will be deduplicated by
+  'squashing' unchanged records and only storing new versions when they
+  were first seen. Since each dict will have a different timestamp, the
+  datetime will be ignored while deduplicating.
 
-  The value is a 4-tuple packed using Msgpack like this:
+The key/value layout is as follows:
+
+* The end IP is used as the key. This allows for fast lookups since it
+  requires only a single seek and a single record.
+
+* The begin IP and the actual information is stored in the value,
+  packed using Msgpack like this:
 
   * IP begin address
   * JSON encoded data for the latest version
@@ -77,56 +83,9 @@ def make_squash_key(d):
     return d
 
 
-def build_record(begin_ip_int, end_ip_int, dicts, existing=None):
-    """Create database records for an iterable of merged dicts."""
-
-    assert dicts or existing, "no data at all to pack?"
-
-    # Some remarks about the construction of database records:
-    #
-    # * The most recent data is stored in full, while older dicts are
-    #   stored in a history structure with (reverse) diffs for each
-    #   pair. This saves a lot of storage space, but requires "patching"
-    #   during lookups. The benefits of storing smaller values (less
-    #   storage space, hence faster lookups) outweigh this disadvantage
-    #   though.
-    #
-    # * Before creating diffs, the data will be deduplicated by
-    #   'squashing' unchanged items and storing records only when they
-    #   were first seen. Since each dict will have a different
-    #   timestamp, the datetime will be ignore while deduplicating.
-
-    if not dicts:
-        # No new data to add, so avoid expensive re-serialisation of the
-        # existing record. Note that the begin and end of the range may
-        # have changed, so blindly reusing the existing key/value pair
-        # from the database (by not updating it) is not correct.
-        latest_json = existing.latest_json
-        latest_datetime = existing.latest_datetime
-        history_msgpack = existing.history_msgpack
-
-    else:
-        # There is previously unseen data to add.
-
-        if existing:
-            # Combine existing record with the new data
-            dicts.extend(existing.iter_versions())
-
-        assert len(dicts) > 0
-
-        dicts.sort(key=DATETIME_GETTER)
-        unique_dicts = list(unique_justseen(dicts, key=make_squash_key))
-
-        unique_dicts.reverse()
-        latest, diffs_generator = dict_diff_incremental(unique_dicts)
-        diffs = list(diffs_generator)
-
-        # Serialize
-        latest_json = json_dumps(latest, ensure_ascii=False).encode('UTF-8')
-        latest_datetime = latest['datetime']
-        history_msgpack = msgpack_dumps_utf8(diffs)
-
-    # Build the actual key and value byte strings.
+def build_key_value(begin_ip_int, end_ip_int, latest_json, latest_datetime,
+                    history_msgpack):
+    """Build the actual key and value byte strings"""
     key = ip_int_to_packed(end_ip_int)
     value = msgpack_dumps((
         ip_int_to_packed(begin_ip_int),
@@ -135,6 +94,54 @@ def build_record(begin_ip_int, end_ip_int, dicts, existing=None):
         history_msgpack,
     ))
     return key, value
+
+
+def build_history(dicts):
+    """Build a history structure"""
+    dicts.sort(key=DATETIME_GETTER)
+    unique_dicts = list(unique_justseen(dicts, key=make_squash_key))
+    unique_dicts.reverse()
+    latest, diffs_generator = dict_diff_incremental(unique_dicts)
+    diffs = list(diffs_generator)
+    return latest, diffs
+
+
+def build_record(begin_ip_int, end_ip_int, dicts, existing=None):
+    """Create database records for an iterable of merged dicts."""
+
+    assert dicts or existing, "no data at all to pack?"
+
+    if not dicts:
+        # No new dicts; avoid expensive re-serialisation. Note that
+        # blindly reusing the existing key/value pair from the database
+        # (by not updating it at all) is not correct, the begin and end
+        # of the range may have changed.
+        return build_key_value(
+            begin_ip_int,
+            end_ip_int,
+            existing.latest_json,
+            existing.latest_datetime,
+            existing.history_msgpack)
+
+    if not existing:
+        # Only new dicts, no existing data
+        latest, diffs = build_history(dicts)
+        return build_key_value(
+            begin_ip_int,
+            end_ip_int,
+            json_dumps(latest, ensure_ascii=False).encode('UTF-8'),
+            latest['datetime'],
+            msgpack_dumps_utf8(diffs))
+
+    # Merge new data and existing record
+    dicts.extend(existing.iter_versions())
+    latest, diffs = build_history(dicts)
+    return build_key_value(
+        begin_ip_int,
+        end_ip_int,
+        json_dumps(latest, ensure_ascii=False).encode('UTF-8'),
+        latest['datetime'],
+        msgpack_dumps_utf8(diffs))
 
 
 class ExistingRecord(object):
