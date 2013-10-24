@@ -61,12 +61,16 @@ from .util import (
     unique_justseen,
 )
 
+DATETIME_GETTER = operator.itemgetter('datetime')
 
 logger = logging.getLogger(__name__)
+
 msgpack_dumps = msgpack.Packer().pack  # faster than calling .packb()
 msgpack_dumps_utf8 = msgpack.Packer(encoding='UTF-8').pack  # idem
-
-DATETIME_GETTER = operator.itemgetter('datetime')
+msgpack_loads_utf8 = functools.partial(
+    msgpack_loads,
+    use_list=False,
+    encoding='UTF-8')
 
 
 def debug_format_dict(d):  # pragma: no cover
@@ -133,7 +137,9 @@ def build_record(begin_ip_int, end_ip_int, dicts, existing=None):
             latest['datetime'],
             msgpack_dumps_utf8(diffs))
 
-    # Merge new data and existing record
+    # At this point we know there is both new data, and an existing
+    # record. These need to be merged..
+
     dicts.extend(existing.iter_versions())
     latest, diffs = build_history(dicts)
     return build_key_value(
@@ -171,10 +177,7 @@ class ExistingRecord(object):
         # Reconstruct history by applying patches incrementally
         yield from dict_patch_incremental(
             latest,
-            msgpack_loads(
-                self.history_msgpack,
-                use_list=False,
-                encoding='UTF-8'),
+            msgpack_loads_utf8(self.history_msgpack),
             inplace=inplace)
 
 
