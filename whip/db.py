@@ -118,7 +118,7 @@ def build_record(begin_ip_int, end_ip_int, dicts, existing=None):
     if not dicts:
         # No new dicts; avoid expensive re-serialisation. Note that
         # blindly reusing the existing key/value pair from the database
-        # (by not updating it at all) is not correct, the begin and end
+        # (by not updating it at all) is not correct: the begin and end
         # of the range may have changed.
         return build_key_value(
             begin_ip_int,
