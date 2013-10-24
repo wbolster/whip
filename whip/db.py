@@ -140,8 +140,19 @@ def build_record(begin_ip_int, end_ip_int, dicts, existing=None):
     # At this point we know there is both new data, and an existing
     # record. These need to be merged..
 
-    dicts.extend(existing.iter_versions())
-    latest, diffs = build_history(dicts)
+    if min(map(DATETIME_GETTER, dicts)) > existing.latest_datetime:
+        # All new data is newer than the existing record. Take
+        # a shortcut by simply prepending the new data to the history
+        # chain. This approach prevents quite a lot of overhead from
+        # build_history().
+        dicts.append(json_loads(existing.latest_json))
+        latest, diffs = build_history(dicts)
+        diffs.extend(msgpack_loads_utf8(existing.history_msgpack))
+    else:
+        # Perform a full merge
+        dicts.extend(existing.iter_versions())
+        latest, diffs = build_history(dicts)
+
     return build_key_value(
         begin_ip_int,
         end_ip_int,
