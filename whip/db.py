@@ -82,24 +82,41 @@ def build_record(begin_ip_int, end_ip_int, dicts, existing=None):
 
     assert dicts or existing, "no data at all to pack?"
 
-    if dicts:
-        # Combine existing record (if any) for this range with the new
-        # data
+    # Some remarks about the construction of database records:
+    #
+    # * The most recent data is stored in full, while older dicts are
+    #   stored in a history structure with (reverse) diffs for each
+    #   pair. This saves a lot of storage space, but requires "patching"
+    #   during lookups. The benefits of storing smaller values (less
+    #   storage space, hence faster lookups) outweigh this disadvantage
+    #   though.
+    #
+    # * Before creating diffs, the data will be deduplicated by
+    #   'squashing' unchanged items and storing records only when they
+    #   were first seen. Since each dict will have a different
+    #   timestamp, the datetime will be ignore while deduplicating.
+
+    if not dicts:
+        # No new data to add, so avoid expensive re-serialisation of the
+        # existing record. Note that the begin and end of the range may
+        # have changed, so blindly reusing the existing key/value pair
+        # from the database (by not updating it) is not correct.
+        latest_json = existing.latest_json
+        latest_datetime = existing.latest_datetime
+        history_msgpack = existing.history_msgpack
+
+    else:
+        # There is previously unseen data to add.
+
         if existing:
+            # Combine existing record with the new data
             dicts.extend(existing.iter_versions())
 
         assert len(dicts) > 0
 
-        # Deduplicate. Each dict will have a different timestamp, so sort
-        # chronologically, and ignore the datetime while deduplicating.
         dicts.sort(key=DATETIME_GETTER)
         unique_dicts = list(unique_justseen(dicts, key=make_squash_key))
 
-        # The most recent data is stored in full, while older dicts are
-        # stored in a history structure with (reverse) diffs for each pair.
-        # This saves a lot of storage space, but requires "patching" during
-        # lookups. The benefits of storing smaller values (less storage
-        # space, hence faster lookups) outweigh this disadvantage though.
         unique_dicts.reverse()
         latest, diffs_generator = dict_diff_incremental(unique_dicts)
         diffs = list(diffs_generator)
@@ -108,15 +125,6 @@ def build_record(begin_ip_int, end_ip_int, dicts, existing=None):
         latest_json = json_dumps(latest, ensure_ascii=False).encode('UTF-8')
         latest_datetime = latest['datetime']
         history_msgpack = msgpack_dumps_utf8(diffs)
-
-    else:
-        # No new data to add, so avoid expensive re-serialisation of the
-        # existing record. Note that the begin and end of the range may
-        # have changed, so blindly reusing the existing key/value pair
-        # from the database (by not updating it) is not correct.
-        latest_json = existing.latest_json
-        latest_datetime = existing.latest_datetime
-        history_msgpack = existing.history_msgpack
 
     # Build the actual key and value byte strings.
     key = ip_int_to_packed(end_ip_int)
