@@ -277,6 +277,8 @@ class Database(object):
         # Force lookups to use a new iterator so new data is seen.
         self.iter = None
 
+        logger.info("Loading finished")
+
     @functools.lru_cache(128 * 1024)
     def lookup(self, ip, datetime=None):
         """Lookup a single IP address in the database.
