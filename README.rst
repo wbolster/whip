@@ -44,11 +44,13 @@ for each distinct range.
 Installation
 ============
 
-Use a virtualenv to install Whip and its dependencies. To install from a source
-tree::
+Use a ``virtualenv`` to install Whip and its dependencies::
+
+    $ pip install whip
+
+Alternatively, to install from a source tree::
 
     $ pip install -r requirements.txt
-
 
 These are the current dependencies:
 
