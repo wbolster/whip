@@ -1,7 +1,14 @@
+import os
+
 from setuptools import find_packages, setup
+
+with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as fp:
+    long_description = fp.read()
 
 setup(
     name='whip',
+    description="Whip, the who, what, where and when about IP address data",
+    long_description=long_description,
     version='0.1',
     author="Wouter Bolsterlee",
     author_email="uws@xs4all.nl",
